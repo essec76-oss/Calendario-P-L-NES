@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Calendario Profitti Trading</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
       --bg: #0f172a;
@@ -539,10 +540,10 @@
 
     <div class="calendar" id="calendar"></div>
 
-    <p class="hint">Clicca su un giorno per aggiungere aperture o chiusure. Le posizioni si aprono in un giorno e si chiudono (anche a tranche) in giorni successivi. I dati restano salvati nel browser.</p>
+    <p class="hint">Clicca su un giorno per aggiungere aperture o chiusure. Le posizioni si aprono in un giorno e si chiudono (anche a tranche) in giorni successivi. I dati sono salvati su Supabase e sincronizzati tra i dispositivi.</p>
 
     <footer>
-      Dati salvati localmente • Nessun server • Pronto all'uso offline
+      Dati salvati su Supabase • Sincronizzati tra dispositivi
     </footer>
   </div>
 
@@ -648,10 +649,14 @@
   </div>
 
   <script>
+    // ========== SUPABASE ==========
+    const SUPABASE_URL = 'https://IL_TUO_PROGETTO.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_...';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
     // ========== CONSTANTS ==========
     const MARGINE_LONG = 350;
     const MARGINE_SHORT = 270;
-    const STORAGE_KEY = 'calendario-profitti-v3';
     let mode = 'apertura'; // 'apertura' | 'chiusura'
     let chMode = 'singola'; // 'singola' | 'multipla'
 
@@ -659,52 +664,56 @@
     let current = new Date();
     current.setDate(1);
     let selectedDate = null;
-    let data = loadData();
-    // data = { capitale: number, posizioni: [ {id, dir, strike, contratti, openKey, nota, chiusure:[{key, contratti, pl}]} ] }
+    let data = [];
+    // data = [ {id, dir, strike, contratti, openKey, nota, chiusure:[{key, contratti, pl, strike}]} ]
 
-    function loadData() {
-      try {
-        let raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed.capitale) document.getElementById('capitale').value = parsed.capitale;
-          if (parsed.targetPct) document.getElementById('targetPct').value = parsed.targetPct;
-          return parsed.posizioni || [];
-        }
-        // migrazione da v2 (ops per giorno) e v1
-        raw = localStorage.getItem('calendario-profitti-v2') || localStorage.getItem('calendario-profitti-v1');
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed.capitale) document.getElementById('capitale').value = parsed.capitale;
-          const ops = parsed.ops || {};
-          const posizioni = [];
-          let id = 1;
-          for (const key in ops) {
-            ops[key].forEach(o => {
-              posizioni.push({
-                id: id++,
-                dir: o.tipologia || 'LONG',
-                strike: '',
-                contratti: o.contratti || 1,
-                openKey: key,
-                nota: o.nota || '',
-                chiusure: [{ key: key, contratti: o.contratti || 1, pl: o.importo || 0 }]
-              });
-            });
-          }
-          return posizioni;
-        }
-      } catch (e) {}
-      return [];
+    async function loadData() {
+      const { data: pos, error: e1 } = await supabase.from('posizioni').select('*');
+      const { data: imp, error: e2 } = await supabase.from('impostazioni').select('*').eq('id', 1).maybeSingle();
+      if (e1 || e2) {
+        console.error('Errore caricamento:', e1 || e2);
+        return [];
+      }
+      if (imp) {
+        document.getElementById('capitale').value = imp.capitale;
+        document.getElementById('targetPct').value = imp.target_pct;
+      }
+      return (pos || []).map(p => ({
+        id: Number(p.id),
+        dir: p.dir,
+        strike: p.strike || '',
+        contratti: p.contratti,
+        openKey: p.open_key,
+        nota: p.nota || '',
+        chiusure: p.chiusure || []
+      }));
     }
 
-    function saveData() {
-      const payload = {
-        capitale: parseFloat(document.getElementById('capitale').value) || 5000,
-        targetPct: parseFloat(document.getElementById('targetPct').value) || 4,
-        posizioni: data
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    async function saveData() {
+      const capitale = parseFloat(document.getElementById('capitale').value) || 5000;
+      const targetPct = parseFloat(document.getElementById('targetPct').value) || 4;
+
+      const { error: e1 } = await supabase.from('impostazioni').upsert({ id: 1, capitale, target_pct: targetPct });
+      if (e1) console.error('Errore salvataggio impostazioni:', e1);
+
+      if (data.length) {
+        const righe = data.map(p => ({
+          id: p.id,
+          dir: p.dir,
+          strike: p.strike,
+          contratti: p.contratti,
+          open_key: p.openKey,
+          nota: p.nota,
+          chiusure: p.chiusure
+        }));
+        const { error: e2 } = await supabase.from('posizioni').upsert(righe);
+        if (e2) console.error('Errore salvataggio posizioni:', e2);
+      }
+    }
+
+    async function deletePosizioneRemota(id) {
+      const { error } = await supabase.from('posizioni').delete().eq('id', id);
+      if (error) console.error('Errore eliminazione:', error);
     }
 
     // ========== HELPERS ==========
@@ -808,13 +817,11 @@
       cell.appendChild(num);
 
       if (chs.length) {
-        // dettaglio chiusure
         let totCtr = 0, totMarg = 0;
         chs.forEach(x => {
           totCtr += x.c.contratti;
           totMarg += margineUnit(x.pos.dir) * x.c.contratti;
         });
-        const roiTot = totMarg > 0 ? (plTot / totMarg) * 100 : 0;
 
         const det = document.createElement('div');
         det.className = 'details';
@@ -850,7 +857,6 @@
         }
       }));
 
-      // posizioni aperte (residuo > 0), aperte da sempre o in qualsiasi giorno
       const aperte = posAperteAll().length;
 
       const capitale = parseFloat(document.getElementById('capitale').value) || 5000;
@@ -879,7 +885,6 @@
     }
 
     function updateTarget(y, m) {
-      // y, m = mese visualizzato nel calendario (default: mese reale corrente)
       const now = new Date();
       if (y == null) { y = now.getFullYear(); m = now.getMonth(); }
 
@@ -893,7 +898,6 @@
       const isMeseCorrente = (y === now.getFullYear() && m === now.getMonth());
       const isMeseFuturo = (y > now.getFullYear()) || (y === now.getFullYear() && m > now.getMonth());
 
-      // giorno di riferimento per l'atteso
       const giorno = isMeseCorrente ? now.getDate() : (isMeseFuturo ? 0 : daysInMonth);
       const atteso = quota * giorno;
       const realizzato = plMese(y, m);
@@ -912,7 +916,6 @@
       elD.textContent = (delta >= 0 ? '+' : '') + '€ ' + fmt(delta);
       elD.className = 't-value ' + (delta >= 0 ? 'pos' : 'neg');
 
-      // barra: verde = realizzato, segnalino giallo = ritmo atteso al punto del mese in cui siamo
       const fill = Math.min(100, target > 0 ? (realizzato / target) * 100 : 0);
       const fillEl = document.getElementById('targetProgress');
       fillEl.style.width = Math.max(0, fill) + '%';
@@ -920,7 +923,6 @@
       const pacePct = isMeseFuturo ? 0 : (isMeseCorrente ? (now.getDate() / daysInMonth) * 100 : 100);
       document.getElementById('targetPace').style.left = Math.min(100, pacePct) + '%';
 
-      // stato del giorno (solo se stai guardando il mese corrente)
       let giornoMsg;
       if (isMeseCorrente) {
         const todayKey = `${y}-${String(m + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -1271,7 +1273,7 @@
         : 'Eliminare questa apertura?';
       if (!confirm(msg)) return;
       data = data.filter(p => p.id !== id);
-      saveData();
+      deletePosizioneRemota(id);
       renderOpsList();
       populatePosizioniChiusura();
     }
@@ -1345,6 +1347,10 @@
 
     // Init
     render();
+    loadData().then(d => {
+      data = d;
+      render();
+    });
   </script>
 </body>
 </html>
