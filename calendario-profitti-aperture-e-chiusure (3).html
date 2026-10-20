@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calendario Profitti Trading</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --border: #334155;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #3b82f6;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #eab308;
+      --long: #3b82f6;
+      --short: #a855f7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 16px;
+      line-height: 1.4;
+    }
+    .container { max-width: 1100px; margin: 0 auto; }
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    h1 { font-size: 1.4rem; font-weight: 700; }
+    .capitale-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .capitale-box label { font-size: 0.85rem; color: var(--muted); }
+    .capitale-box input {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 1.2rem;
+      font-weight: 700;
+      width: 140px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      text-align: right;
+    }
+    .capitale-box input:focus { outline: 2px solid var(--accent); }
+    /* Target panel */
+    .target-panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 20px;
+    }
+    .target-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 28px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .target-item { min-width: 110px; }
+    .target-item .t-label { font-size: 0.75rem; color: var(--muted); margin-bottom: 2px; }
+    .target-item .t-value { font-size: 1.05rem; font-weight: 700; }
+    .t-value.pos { color: var(--green); }
+    .t-value.neg { color: var(--red); }
+    .target-pct {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .target-pct input {
+      width: 64px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 5px 8px;
+      border-radius: 6px;
+      text-align: right;
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+    .target-pct span { font-size: 0.85rem; color: var(--muted); }
+    .progress-bar {
+      height: 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-top: 12px;
+      position: relative;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--green);
+      border-radius: 6px;
+      transition: width 0.3s;
+    }
+    .progress-fill.neg { background: var(--red); }
+    .progress-pace {
+      position: absolute;
+      top: -3px;
+      bottom: -3px;
+      width: 2px;
+      background: var(--yellow);
+    }
+    .target-status {
+      margin-top: 10px;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .target-status strong { color: var(--text); }
+    .target-status .ok { color: var(--green); font-weight: 700; }
+    .target-status .ko { color: var(--red); font-weight: 700; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+    .stat-card .label { font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
+    .stat-card .value { font-size: 1.3rem; font-weight: 700; }
+    .stat-card .value.positive { color: var(--green); }
+    .stat-card .value.negative { color: var(--red); }
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .nav button {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+    .nav button:hover { background: var(--border); }
+    .nav h2 { font-size: 1.2rem; }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .legend .dot { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 4px; vertical-align: middle; }
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+      margin-bottom: 24px;
+    }
+    .weekday {
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--muted);
+      padding: 6px 0;
+      font-weight: 600;
+    }
+    .day {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      min-height: 88px;
+      padding: 6px;
+      cursor: pointer;
+      transition: border-color 0.15s, transform 0.1s;
+      display: flex;
+      flex-direction: column;
+    }
+    .day:hover { border-color: var(--accent); transform: translateY(-1px); }
+    .day.other-month { opacity: 0.35; }
+    .day.today { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+    .day .num { font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+    .day .pnl {
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-top: auto;
+    }
+    .day .pnl.pos { color: var(--green); }
+    .day .pnl.neg { color: var(--red); }
+    .day .details {
+      font-size: 0.62rem;
+      color: #64748b;
+      line-height: 1.25;
+      margin-top: 2px;
+    }
+    .day .ap-badge {
+      font-size: 0.6rem;
+      font-weight: 700;
+      color: #93c5fd;
+      background: rgba(59,130,246,0.18);
+      padding: 1px 5px;
+      border-radius: 5px;
+    }
+    .day.has-events { background: #1a2332; }
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 16px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 480px;
+      max-height: 92vh;
+      overflow-y: auto;
+      padding: 20px;
+    }
+    .modal h3 { margin-bottom: 16px; font-size: 1.15rem; }
+    .type-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .type-toggle button {
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--muted);
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+    .type-toggle button.active.ap { background: rgba(59,130,246,0.25); color: #93c5fd; border-color: var(--accent); }
+    .type-toggle button.active.ch { background: rgba(34,197,94,0.2); color: #86efac; border-color: var(--green); }
+    .sub-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .sub-toggle button {
+      padding: 7px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--muted);
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .sub-toggle button.active { background: rgba(34,197,94,0.15); color: #86efac; border-color: var(--green); }
+    .pos-check-list { display: flex; flex-direction: column; gap: 8px; }
+    .pos-check-header {
+      display: flex;
+      gap: 10px;
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: -2px;
+      padding-right: 2px;
+    }
+    .pos-check-header .h-info { flex: 1; }
+    .pos-check-header .h-strike { width: 90px; text-align: center; }
+    .pos-check-header .h-ctr { width: 76px; text-align: center; }
+    .pos-check {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .pos-check.selected { border-color: var(--green); background: rgba(34,197,94,0.08); }
+    .pos-check input[type="checkbox"] { accent-color: var(--green); width: 16px; height: 16px; flex-shrink: 0; }
+    .pos-check .strike-input {
+      width: 90px;
+      padding: 5px 8px;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      font-size: 0.85rem;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .pos-check .strike-input:disabled { opacity: 0.4; }
+    .pos-check .ctr-input {
+      width: 76px;
+      padding: 5px 8px;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      font-size: 0.85rem;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .form-group { margin-bottom: 12px; }
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .form-group input, .form-group textarea, .form-group select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .ops-list { margin: 12px 0 16px; }
+    .section-title {
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 4px 0 8px;
+    }
+    .op-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 12px;
+      background: var(--bg);
+      border-radius: 10px;
+      margin-bottom: 8px;
+      gap: 10px;
+    }
+    .op-item .info { flex: 1; min-width: 0; }
+    .op-item .amount { font-weight: 700; font-size: 1.05rem; }
+    .op-item .amount.pos { color: var(--green); }
+    .op-item .amount.neg { color: var(--red); }
+    .op-item .amount.neutral { color: var(--text); }
+    .op-item .meta {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 4px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 12px;
+    }
+    .op-item .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    .badge.long { background: rgba(59,130,246,0.25); color: #93c5fd; }
+    .badge.short { background: rgba(168,85,247,0.25); color: #d8b4fe; }
+    .badge.ap { background: rgba(59,130,246,0.18); color: #93c5fd; }
+    .badge.ch { background: rgba(34,197,94,0.18); color: #86efac; }
+    .op-item .roi {
+      font-weight: 600;
+      font-size: 0.85rem;
+      margin-top: 3px;
+    }
+    .op-item .roi.pos { color: var(--green); }
+    .op-item .roi.neg { color: var(--red); }
+    .op-item .note { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+    .btn-row { display: flex; gap: 10px; margin-top: 16px; }
+    .btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-secondary { background: var(--border); color: var(--text); }
+    .btn-sm {
+      padding: 4px 8px;
+      font-size: 0.75rem;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      background: var(--border);
+      color: var(--text);
+      flex-shrink: 0;
+    }
+    .btn-sm.danger { background: #7f1d1d; color: #fecaca; }
+    .empty { text-align: center; color: var(--muted); padding: 12px 0; font-size: 0.9rem; }
+    .hint { font-size: 0.8rem; color: var(--muted); margin-top: 8px; }
+    .margini-info {
+      font-size: 0.75rem;
+      color: var(--muted);
+      background: var(--bg);
+      padding: 8px 10px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    .preview-roi {
+      font-size: 0.85rem;
+      margin-top: 6px;
+      padding: 6px 10px;
+      background: var(--bg);
+      border-radius: 6px;
+      display: none;
+    }
+    .preview-roi.visible { display: block; }
+    footer {
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 24px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    @media (max-width: 600px) {
+      .day { min-height: 64px; }
+      .day .pnl { font-size: 0.7rem; }
+      h1 { font-size: 1.15rem; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📅 Calendario Profitti</h1>
+      <div class="capitale-box">
+        <div>
+          <label for="capitale">Capitale (€)</label>
+          <input type="number" id="capitale" value="5000" step="100" min="0" />
+        </div>
+      </div>
+    </header>
+
+    <div class="target-panel">
+      <div class="target-row">
+        <div class="target-item target-pct">
+          <div>
+            <div class="t-label">Target mensile</div>
+            <div class="target-pct">
+              <input type="number" id="targetPct" value="4" step="0.5" min="0" />
+              <span>% sul capitale = <strong id="targetEuro">€ 0,00</strong></span>
+            </div>
+          </div>
+        </div>
+        <div class="target-item">
+          <div class="t-label">Quota giornaliera (al giorno)</div>
+          <div class="t-value" id="quotaGiornaliera">€ 0,00</div>
+        </div>
+        <div class="target-item">
+          <div class="t-label">Atteso a oggi (giorno <span id="giornoCorrente">1</span>)</div>
+          <div class="t-value" id="attesoOggi">€ 0,00</div>
+        </div>
+        <div class="target-item">
+          <div class="t-label">Realizzato questo mese</div>
+          <div class="t-value" id="realizzatoMese">€ 0,00</div>
+        </div>
+        <div class="target-item">
+          <div class="t-label">Differenza vs ritmo</div>
+          <div class="t-value" id="deltaRitmo">€ 0,00</div>
+        </div>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="targetProgress" style="width:0%"></div>
+        <div class="progress-pace" id="targetPace" style="left:0%"></div>
+      </div>
+      <div class="target-status" id="targetStatus"></div>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="label">Profitto mese (chiusure)</div>
+        <div class="value" id="profittoMese">€ 0,00</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Rendimento su capitale</div>
+        <div class="value" id="rendimento">0,00%</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">N° chiusure</div>
+        <div class="value" id="numOps">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Posizioni aperte</div>
+        <div class="value" id="posAperte">0</div>
+      </div>
+    </div>
+
+    <div class="nav">
+      <button id="prevMonth">← Prec.</button>
+      <h2 id="monthLabel"></h2>
+      <button id="nextMonth">Succ. →</button>
+    </div>
+
+    <div class="legend">
+      <span><span class="dot" style="background:rgba(59,130,246,0.5)"></span>Apertura posizione</span>
+      <span><span class="dot" style="background:#22c55e"></span>Chiusura in profitto</span>
+      <span><span class="dot" style="background:#ef4444"></span>Chiusura in perdita</span>
+    </div>
+
+    <div class="calendar" id="calendar"></div>
+
+    <p class="hint">Clicca su un giorno per aggiungere aperture o chiusure. Le posizioni si aprono in un giorno e si chiudono (anche a tranche) in giorni successivi. I dati restano salvati nel browser.</p>
+
+    <footer>
+      Dati salvati localmente • Nessun server • Pronto all'uso offline
+    </footer>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <h3 id="modalTitle">Operazioni del giorno</h3>
+
+      <div class="ops-list" id="opsList"></div>
+
+      <div class="type-toggle">
+        <button id="toggleApertura" class="active ap">▲ Apertura</button>
+        <button id="toggleChiusura" class="ch">▼ Chiusura</button>
+      </div>
+
+      <!-- FORM APERTURA -->
+      <div id="formApertura">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="apTipologia">Direzione</label>
+            <select id="apTipologia">
+              <option value="LONG">LONG</option>
+              <option value="SHORT">SHORT</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="apContratti">N° contratti</label>
+            <input type="number" id="apContratti" min="1" step="1" value="1" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="apStrike">Strike</label>
+            <input type="text" id="apStrike" placeholder="es. 18500" />
+          </div>
+          <div class="form-group">
+            <label for="apNota">Nota (opzionale)</label>
+            <input type="text" id="apNota" placeholder="es. NAS100, exp 31/10..." maxlength="80" />
+          </div>
+        </div>
+        <div class="preview-roi" id="previewApertura"></div>
+      </div>
+
+      <!-- FORM CHIUSURA -->
+      <div id="formChiusura" style="display:none;">
+        <div class="margini-info">
+          Margini: <strong>LONG = 350 €</strong> · <strong>SHORT = 270 €</strong> (× n° contratti)
+        </div>
+        <div class="sub-toggle">
+          <button id="subSingola" class="active">Chiusura singola</button>
+          <button id="subMultipla">Chiusura multipla</button>
+        </div>
+
+        <!-- CHIUSURA SINGOLA -->
+        <div id="chSingola">
+          <div class="form-group">
+            <label for="chPosizione">Posizione da chiudere</label>
+            <select id="chPosizione"></select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="chStrike">Strike chiusura</label>
+              <input type="text" id="chStrike" placeholder="es. 18700" />
+            </div>
+            <div class="form-group">
+              <label for="chContratti">Contratti da chiudere</label>
+              <input type="number" id="chContratti" min="1" step="1" value="1" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="chImporto">P/L della chiusura (€)</label>
+            <input type="number" id="chImporto" step="0.01" placeholder="es. 125.50 oppure -80" />
+          </div>
+          <div class="preview-roi" id="previewChiusura"></div>
+        </div>
+
+        <!-- CHIUSURA MULTIPLA -->
+        <div id="chMultipla" style="display:none;">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="chStrikeMulti">Strike di uscita (comune)</label>
+              <input type="text" id="chStrikeMulti" placeholder="es. 18700" />
+            </div>
+            <div class="form-group">
+              <label for="chImportoMulti">P/L totale (€)</label>
+              <input type="number" id="chImportoMulti" step="0.01" placeholder="es. 375 oppure -150" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Posizioni da chiudere (spunta quelle da chiudere oggi)</label>
+            <div class="pos-check-list" id="posCheckList"></div>
+          </div>
+          <div class="hint">Il P/L totale viene ripartito proporzionalmente ai contratti chiusi di ogni posizione.</div>
+          <div class="preview-roi" id="previewChiusuraMulti"></div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="btnChiudi">Chiudi</button>
+        <button class="btn btn-primary" id="btnAggiungi">+ Aggiungi</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========== CONSTANTS ==========
+    const MARGINE_LONG = 350;
+    const MARGINE_SHORT = 270;
+    const STORAGE_KEY = 'calendario-profitti-v3';
+    let mode = 'apertura'; // 'apertura' | 'chiusura'
+    let chMode = 'singola'; // 'singola' | 'multipla'
+
+    // ========== STATE ==========
+    let current = new Date();
+    current.setDate(1);
+    let selectedDate = null;
+    let data = loadData();
+    // data = { capitale: number, posizioni: [ {id, dir, strike, contratti, openKey, nota, chiusure:[{key, contratti, pl}]} ] }
+
+    function loadData() {
+      try {
+        let raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.capitale) document.getElementById('capitale').value = parsed.capitale;
+          if (parsed.targetPct) document.getElementById('targetPct').value = parsed.targetPct;
+          return parsed.posizioni || [];
+        }
+        // migrazione da v2 (ops per giorno) e v1
+        raw = localStorage.getItem('calendario-profitti-v2') || localStorage.getItem('calendario-profitti-v1');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.capitale) document.getElementById('capitale').value = parsed.capitale;
+          const ops = parsed.ops || {};
+          const posizioni = [];
+          let id = 1;
+          for (const key in ops) {
+            ops[key].forEach(o => {
+              posizioni.push({
+                id: id++,
+                dir: o.tipologia || 'LONG',
+                strike: '',
+                contratti: o.contratti || 1,
+                openKey: key,
+                nota: o.nota || '',
+                chiusure: [{ key: key, contratti: o.contratti || 1, pl: o.importo || 0 }]
+              });
+            });
+          }
+          return posizioni;
+        }
+      } catch (e) {}
+      return [];
+    }
+
+    function saveData() {
+      const payload = {
+        capitale: parseFloat(document.getElementById('capitale').value) || 5000,
+        targetPct: parseFloat(document.getElementById('targetPct').value) || 4,
+        posizioni: data
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    }
+
+    // ========== HELPERS ==========
+    function fmt(n) {
+      return n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function uid() { return Date.now() + Math.floor(Math.random() * 1000); }
+
+    function margineUnit(dir) { return dir === 'SHORT' ? MARGINE_SHORT : MARGINE_LONG; }
+
+    function residual(p) {
+      const chiusi = p.chiusure.reduce((s, c) => s + c.contratti, 0);
+      return p.contratti - chiusi;
+    }
+
+    function posAperteAll() {
+      return data.filter(p => residual(p) > 0);
+    }
+
+    // eventi di un giorno
+    function apertureDelGiorno(key) {
+      return data.filter(p => p.openKey === key);
+    }
+    function chiusureDelGiorno(key) {
+      const out = [];
+      data.forEach(p => p.chiusure.forEach((c, i) => {
+        if (c.key === key) out.push({ pos: p, c, i });
+      }));
+      return out;
+    }
+    function plChiusureDelGiorno(key) {
+      return chiusureDelGiorno(key).reduce((s, x) => s + x.c.pl, 0);
+    }
+
+    function calcRoi(pl, margine) {
+      if (!margine || margine === 0) return 0;
+      return (pl / margine) * 100;
+    }
+
+    // ========== RENDER CALENDAR ==========
+    function render() {
+      const year = current.getFullYear();
+      const month = current.getMonth();
+      const label = current.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+      document.getElementById('monthLabel').textContent = label.charAt(0).toUpperCase() + label.slice(1);
+
+      const firstDay = new Date(year, month, 1);
+      const startWeekday = (firstDay.getDay() + 6) % 7;
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const daysInPrev = new Date(year, month, 0).getDate();
+
+      const cal = document.getElementById('calendar');
+      cal.innerHTML = '';
+
+      ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].forEach(d => {
+        const el = document.createElement('div');
+        el.className = 'weekday';
+        el.textContent = d;
+        cal.appendChild(el);
+      });
+
+      for (let i = startWeekday - 1; i >= 0; i--) {
+        const d = daysInPrev - i;
+        cal.appendChild(createDayCell(year, month - 1, d, true));
+      }
+
+      const today = new Date();
+      for (let d = 1; d <= daysInMonth; d++) {
+        const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === d;
+        cal.appendChild(createDayCell(year, month, d, false, isToday));
+      }
+
+      const totalCells = startWeekday + daysInMonth;
+      const remaining = (7 - (totalCells % 7)) % 7;
+      for (let d = 1; d <= remaining; d++) {
+        cal.appendChild(createDayCell(year, month + 1, d, true));
+      }
+
+      updateStats(year, month);
+      updateTarget(year, month);
+    }
+
+    function createDayCell(y, m, d, other, isToday = false) {
+      const dt = new Date(y, m, d);
+      const y2 = dt.getFullYear(), m2 = dt.getMonth(), d2 = dt.getDate();
+      const key = `${y2}-${String(m2 + 1).padStart(2, '0')}-${String(d2).padStart(2, '0')}`;
+
+      const aps = apertureDelGiorno(key);
+      const chs = chiusureDelGiorno(key);
+      const plTot = plChiusureDelGiorno(key);
+      const hasEvents = aps.length > 0 || chs.length > 0;
+
+      const cell = document.createElement('div');
+      cell.className = 'day' + (other ? ' other-month' : '') + (isToday ? ' today' : '') + (hasEvents ? ' has-events' : '');
+      cell.dataset.key = key;
+
+      const num = document.createElement('div');
+      num.className = 'num';
+      num.innerHTML = dt.getDate() + (aps.length ? ` <span class="ap-badge">+${aps.length} ap</span>` : '');
+      cell.appendChild(num);
+
+      if (chs.length) {
+        // dettaglio chiusure
+        let totCtr = 0, totMarg = 0;
+        chs.forEach(x => {
+          totCtr += x.c.contratti;
+          totMarg += margineUnit(x.pos.dir) * x.c.contratti;
+        });
+        const roiTot = totMarg > 0 ? (plTot / totMarg) * 100 : 0;
+
+        const det = document.createElement('div');
+        det.className = 'details';
+        det.textContent = `${totCtr} ctr chiusi · ${fmt(totMarg)}€ marg.`;
+        cell.appendChild(det);
+
+        const pnl = document.createElement('div');
+        pnl.className = 'pnl ' + (plTot >= 0 ? 'pos' : 'neg');
+        pnl.textContent = (plTot >= 0 ? '+' : '') + fmt(plTot) + ' €';
+        cell.appendChild(pnl);
+      }
+
+      if (aps.length && !chs.length) {
+        const det = document.createElement('div');
+        det.className = 'details';
+        const desc = aps.map(p => `${p.dir} ${p.contratti}${p.strike ? ' @' + p.strike : ''}`).join(' · ');
+        det.textContent = desc;
+        cell.appendChild(det);
+      }
+
+      cell.addEventListener('click', () => openModal(key));
+      return cell;
+    }
+
+    function updateStats(year, month) {
+      const prefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+      let profitto = 0, numChiusure = 0;
+
+      data.forEach(p => p.chiusure.forEach(c => {
+        if (c.key.startsWith(prefix)) {
+          profitto += c.pl || 0;
+          numChiusure++;
+        }
+      }));
+
+      // posizioni aperte (residuo > 0), aperte da sempre o in qualsiasi giorno
+      const aperte = posAperteAll().length;
+
+      const capitale = parseFloat(document.getElementById('capitale').value) || 5000;
+      const perc = capitale > 0 ? (profitto / capitale) * 100 : 0;
+
+      const elP = document.getElementById('profittoMese');
+      elP.textContent = (profitto >= 0 ? '+' : '') + '€ ' + fmt(profitto);
+      elP.className = 'value ' + (profitto > 0 ? 'positive' : profitto < 0 ? 'negative' : '');
+
+      const elR = document.getElementById('rendimento');
+      elR.textContent = (perc >= 0 ? '+' : '') + fmt(perc) + '%';
+      elR.className = 'value ' + (perc > 0 ? 'positive' : perc < 0 ? 'negative' : '');
+
+      document.getElementById('numOps').textContent = numChiusure;
+      document.getElementById('posAperte').textContent = aperte;
+    }
+
+    // ========== TARGET PANNEL ==========
+    function plMese(y, m) {
+      const prefix = `${y}-${String(m + 1).padStart(2, '0')}`;
+      let tot = 0;
+      data.forEach(p => p.chiusure.forEach(c => {
+        if (c.key.startsWith(prefix)) tot += c.pl || 0;
+      }));
+      return tot;
+    }
+
+    function updateTarget(y, m) {
+      // y, m = mese visualizzato nel calendario (default: mese reale corrente)
+      const now = new Date();
+      if (y == null) { y = now.getFullYear(); m = now.getMonth(); }
+
+      const capitale = parseFloat(document.getElementById('capitale').value) || 5000;
+      const pct = parseFloat(document.getElementById('targetPct').value) || 0;
+      const target = capitale * pct / 100;
+
+      const daysInMonth = new Date(y, m + 1, 0).getDate();
+      const quota = target / daysInMonth;
+
+      const isMeseCorrente = (y === now.getFullYear() && m === now.getMonth());
+      const isMeseFuturo = (y > now.getFullYear()) || (y === now.getFullYear() && m > now.getMonth());
+
+      // giorno di riferimento per l'atteso
+      const giorno = isMeseCorrente ? now.getDate() : (isMeseFuturo ? 0 : daysInMonth);
+      const atteso = quota * giorno;
+      const realizzato = plMese(y, m);
+      const delta = realizzato - atteso;
+
+      document.getElementById('targetEuro').textContent = '€ ' + fmt(target);
+      document.getElementById('quotaGiornaliera').textContent = '€ ' + fmt(quota);
+      document.getElementById('giornoCorrente').textContent = isMeseCorrente ? giorno : (isMeseFuturo ? 'futuro' : 'chiuso');
+      document.getElementById('attesoOggi').textContent = '€ ' + fmt(atteso);
+
+      const elR = document.getElementById('realizzatoMese');
+      elR.textContent = (realizzato >= 0 ? '+' : '') + '€ ' + fmt(realizzato);
+      elR.className = 't-value ' + (realizzato > 0 ? 'pos' : realizzato < 0 ? 'neg' : '');
+
+      const elD = document.getElementById('deltaRitmo');
+      elD.textContent = (delta >= 0 ? '+' : '') + '€ ' + fmt(delta);
+      elD.className = 't-value ' + (delta >= 0 ? 'pos' : 'neg');
+
+      // barra: verde = realizzato, segnalino giallo = ritmo atteso al punto del mese in cui siamo
+      const fill = Math.min(100, target > 0 ? (realizzato / target) * 100 : 0);
+      const fillEl = document.getElementById('targetProgress');
+      fillEl.style.width = Math.max(0, fill) + '%';
+      fillEl.className = 'progress-fill' + (realizzato < 0 ? ' neg' : '');
+      const pacePct = isMeseFuturo ? 0 : (isMeseCorrente ? (now.getDate() / daysInMonth) * 100 : 100);
+      document.getElementById('targetPace').style.left = Math.min(100, pacePct) + '%';
+
+      // stato del giorno (solo se stai guardando il mese corrente)
+      let giornoMsg;
+      if (isMeseCorrente) {
+        const todayKey = `${y}-${String(m + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const plOggi = plChiusureDelGiorno(todayKey);
+        const deltaGiorno = plOggi - quota;
+        if (plOggi === 0 && !chiusureDelGiorno(todayKey).length) {
+          giornoMsg = `Oggi ancora nessuna chiusura · obiettivo del giorno: <strong>€ ${fmt(quota)}</strong>`;
+        } else if (deltaGiorno >= 0) {
+          giornoMsg = `Oggi: <span class="ok">✓ obiettivo del giorno centrato</span> (${plOggi >= 0 ? '+' : ''}€ ${fmt(plOggi)} vs € ${fmt(quota)})`;
+        } else {
+          giornoMsg = `Oggi: <span class="ko">obiettivo non ancora centrato</span> (${plOggi >= 0 ? '+' : ''}€ ${fmt(plOggi)} — mancano € ${fmt(-deltaGiorno)})`;
+        }
+      } else {
+        giornoMsg = `Giorni del mese: <strong>${daysInMonth}</strong>${isMeseFuturo ? ' · mese futuro' : ' · mese concluso'}`;
+      }
+
+      let ritmoMsg;
+      if (isMeseFuturo) {
+        ritmoMsg = `Mese futuro: obiettivo <strong>€ ${fmt(target)}</strong> (${pct}% mensile)`;
+      } else if (delta >= 0) {
+        ritmoMsg = isMeseCorrente
+          ? `Sei <span class="ok">in anticipo di € ${fmt(delta)}</span> sul ritmo del target (${pct}% mensile)`
+          : `Mese concluso: target <span class="ok">centrato</span> (+€ ${fmt(delta)} oltre il ${pct}%)`;
+      } else {
+        ritmoMsg = isMeseCorrente
+          ? `Sei <span class="ko">in ritardo di € ${fmt(-delta)}</span> sul ritmo del target (${pct}% mensile)`
+          : `Mese concluso: <span class="ko">target mancato</span> (−€ ${fmt(-delta)} vs ${pct}%)`;
+      }
+
+      document.getElementById('targetStatus').innerHTML = ritmoMsg + ' · ' + giornoMsg;
+    }
+
+    // ========== MODAL ==========
+    function openModal(key) {
+      selectedDate = key;
+      const [y, m, d] = key.split('-');
+      const dateObj = new Date(y, m - 1, d);
+      const label = dateObj.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      document.getElementById('modalTitle').textContent = label.charAt(0).toUpperCase() + label.slice(1);
+
+      setMode('apertura');
+      setChMode('singola');
+      resetForms();
+      renderOpsList();
+      document.getElementById('modal').classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.remove('open');
+      selectedDate = null;
+      render();
+    }
+
+    function resetForms() {
+      document.getElementById('apTipologia').value = 'LONG';
+      document.getElementById('apContratti').value = '1';
+      document.getElementById('apStrike').value = '';
+      document.getElementById('apNota').value = '';
+      document.getElementById('chImporto').value = '';
+      document.getElementById('chContratti').value = '1';
+      document.getElementById('chStrike').value = '';
+      document.getElementById('chStrikeMulti').value = '';
+      document.getElementById('chImportoMulti').value = '';
+      document.getElementById('previewApertura').classList.remove('visible');
+      document.getElementById('previewChiusura').classList.remove('visible');
+      document.getElementById('previewChiusuraMulti').classList.remove('visible');
+      populatePosizioniChiusura();
+    }
+
+    function populatePosizioniChiusura() {
+      const sel = document.getElementById('chPosizione');
+      const aperte = posAperteAll();
+      sel.innerHTML = '';
+      if (!aperte.length) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = '— Nessuna posizione aperta —';
+        sel.appendChild(opt);
+        sel.disabled = true;
+        renderPosCheckList();
+        return;
+      }
+      sel.disabled = false;
+      aperte.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        const dt = p.openKey.split('-').reverse().join('/');
+        opt.textContent = `#${p.id} ${p.dir} · ${residual(p)}/${p.contratti} contr. residui · strike ${p.strike || '—'} · ap. ${dt}${p.nota ? ' · ' + p.nota : ''}`;
+        sel.appendChild(opt);
+      });
+      const first = aperte[0];
+      document.getElementById('chContratti').value = residual(first);
+      document.getElementById('chStrike').value = first.strike || '';
+      updatePreviewChiusura();
+      renderPosCheckList();
+    }
+
+    function renderPosCheckList() {
+      const box = document.getElementById('posCheckList');
+      const aperte = posAperteAll();
+      if (!aperte.length) {
+        box.innerHTML = '<div class="empty">— Nessuna posizione aperta —</div>';
+        return;
+      }
+      box.innerHTML = '';
+      const header = document.createElement('div');
+      header.className = 'pos-check-header';
+      header.innerHTML = '<span></span><span></span><span class="h-info">Posizione</span><span class="h-ctr">Contratti</span>';
+      box.appendChild(header);
+      aperte.forEach(p => {
+        const dt = p.openKey.split('-').reverse().join('/');
+        const row = document.createElement('label');
+        row.className = 'pos-check';
+        row.innerHTML = `
+          <input type="checkbox" data-id="${p.id}" checked />
+          <span><span class="badge ${p.dir.toLowerCase()}">#${p.id} ${p.dir}</span></span>
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(p.strike || '')}${p.nota ? ' · ' + escapeHtml(p.nota) : ''} · ap. ${dt}</span>
+          <input type="number" class="ctr-input" data-id="${p.id}" min="1" max="${residual(p)}" value="${residual(p)}" title="Contratti da chiudere (residuo ${residual(p)})" />
+        `;
+        const cb = row.querySelector('input[type="checkbox"]');
+        const ctr = row.querySelector('.ctr-input');
+        cb.addEventListener('change', () => {
+          row.classList.toggle('selected', cb.checked);
+          ctr.disabled = !cb.checked;
+          updatePreviewMulti();
+        });
+        ctr.addEventListener('input', updatePreviewMulti);
+        row.classList.add('selected');
+        box.appendChild(row);
+      });
+      updatePreviewMulti();
+    }
+
+    function multiSelection() {
+      const out = [];
+      document.querySelectorAll('#posCheckList .pos-check').forEach(row => {
+        const cb = row.querySelector('input[type="checkbox"]');
+        if (!cb.checked) return;
+        const pos = data.find(p => p.id == cb.dataset.id);
+        if (!pos) return;
+        let c = parseInt(row.querySelector('.ctr-input').value) || 1;
+        c = Math.min(Math.max(1, c), residual(pos));
+        out.push({ pos, contratti: c });
+      });
+      return out;
+    }
+
+    function getStrikeMulti() {
+      return (document.getElementById('chStrikeMulti').value || '').trim();
+    }
+
+    function setChMode(m) {
+      chMode = m;
+      document.getElementById('chSingola').style.display = m === 'singola' ? '' : 'none';
+      document.getElementById('chMultipla').style.display = m === 'multipla' ? '' : 'none';
+      document.getElementById('subSingola').classList.toggle('active', m === 'singola');
+      document.getElementById('subMultipla').classList.toggle('active', m === 'multipla');
+    }
+
+    function updatePreviewMulti() {
+      const el = document.getElementById('previewChiusuraMulti');
+      const pl = parseFloat(document.getElementById('chImportoMulti').value);
+      const sel = multiSelection();
+      if (!sel.length || isNaN(pl)) {
+        el.classList.remove('visible');
+        return;
+      }
+      const totCtr = sel.reduce((s, x) => s + x.contratti, 0);
+      const totMarg = sel.reduce((s, x) => s + margineUnit(x.pos.dir) * x.contratti, 0);
+      const roi = calcRoi(pl, totMarg);
+      const dettaglio = sel.map(x => {
+        const quota = totCtr > 0 ? pl * (x.contratti / totCtr) : 0;
+        return `#${x.pos.id}: ${x.contratti} ctr → ${quota >= 0 ? '+' : ''}${fmt(quota)} €`;
+      }).join(' · ');
+      const stk = getStrikeMulti();
+      el.innerHTML = `${stk ? `Strike: <strong>${escapeHtml(stk)}</strong> · ` : ''}<strong>${totCtr} contr.</strong> · margine ${fmt(totMarg)} € · ROI <strong style="color:${roi>=0?'#22c55e':'#ef4444'}">${roi>=0?'+':''}${fmt(roi)}%</strong><br/><span style="font-size:0.75rem;color:var(--muted)">${dettaglio}</span>`;
+      el.classList.add('visible');
+    }
+
+    function addChiusuraMulti() {
+      const pl = parseFloat(document.getElementById('chImportoMulti').value);
+      const sel = multiSelection();
+      if (isNaN(pl)) {
+        document.getElementById('chImportoMulti').focus();
+        return;
+      }
+      if (!sel.length) return;
+      const totCtr = sel.reduce((s, x) => s + x.contratti, 0);
+      sel.forEach(x => {
+        const quota = pl * (x.contratti / totCtr);
+        x.pos.chiusure.push({ key: selectedDate, contratti: x.contratti, pl: quota, strike: getStrikeMulti() });
+      });
+      saveData();
+      document.getElementById('chImportoMulti').value = '';
+      renderOpsList();
+      renderPosCheckList();
+      populatePosizioniChiusura();
+    }
+
+    function setMode(m) {
+      mode = m;
+      document.getElementById('formApertura').style.display = m === 'apertura' ? '' : 'none';
+      document.getElementById('formChiusura').style.display = m === 'chiusura' ? '' : 'none';
+      document.getElementById('toggleApertura').classList.toggle('active', m === 'apertura');
+      document.getElementById('toggleChiusura').classList.toggle('active', m === 'chiusura');
+    }
+
+    function renderOpsList() {
+      const list = document.getElementById('opsList');
+      const aps = apertureDelGiorno(selectedDate);
+      const chs = chiusureDelGiorno(selectedDate);
+
+      if (!aps.length && !chs.length) {
+        list.innerHTML = '<div class="empty">Nessuna operazione ancora</div>';
+        return;
+      }
+
+      let html = '';
+      if (aps.length) {
+        html += '<div class="section-title">Aperture di questo giorno</div>';
+        html += aps.map(p => {
+          const marg = margineUnit(p.dir) * p.contratti;
+          const res = residual(p);
+          const chiuseTxt = p.contratti - res > 0 ? ` · già chiuse ${p.contratti - res}/${p.contratti}` : '';
+          return `
+            <div class="op-item">
+              <div class="info">
+                <div class="amount neutral">▲ Apertura <span class="badge ${p.dir.toLowerCase()}">${p.dir}</span></div>
+                <div class="meta">
+                  <span>${p.contratti} contr.</span>
+                  ${p.strike ? `<span>Strike: ${escapeHtml(p.strike)}</span>` : ''}
+                  <span>Margine: ${fmt(marg)} €</span>
+                  <span>Residuo: ${res} contr.${chiuseTxt}</span>
+                </div>
+                ${p.nota ? `<div class="note">${escapeHtml(p.nota)}</div>` : ''}
+              </div>
+              <button class="btn-sm danger" onclick="deletePosizione(${p.id})">Elimina</button>
+            </div>`;
+        }).join('');
+      }
+
+      if (chs.length) {
+        html += '<div class="section-title">Chiusure di questo giorno</div>';
+        html += chs.map(x => {
+          const marg = margineUnit(x.pos.dir) * x.c.contratti;
+          const roi = calcRoi(x.c.pl, marg);
+          return `
+            <div class="op-item">
+              <div class="info">
+                <div class="amount ${x.c.pl >= 0 ? 'pos' : 'neg'}">${x.c.pl >= 0 ? '+' : ''}${fmt(x.c.pl)} €</div>
+                <div class="meta">
+                  <span>▼ Chiusura <span class="badge ${x.pos.dir.toLowerCase()}">#${x.pos.id} ${x.pos.dir}</span></span>
+                  <span>${x.c.contratti} contr. (su ${x.pos.contratti})</span>
+                  <span>Margine: ${fmt(marg)} €</span>
+                  ${(x.c.strike || x.pos.strike) ? `<span>Strike ch.: ${escapeHtml(x.c.strike || x.pos.strike)}</span>` : ''}
+                </div>
+                <div class="roi ${roi >= 0 ? 'pos' : 'neg'}">% sul margine: ${roi >= 0 ? '+' : ''}${fmt(roi)}%</div>
+              </div>
+              <button class="btn-sm danger" onclick="deleteChiusura(${x.pos.id}, ${x.i})">Elimina</button>
+            </div>`;
+        }).join('');
+      }
+      list.innerHTML = html;
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ========== PREVIEWS ==========
+    function updatePreviewApertura() {
+      const dir = document.getElementById('apTipologia').value;
+      const contratti = Math.max(1, parseInt(document.getElementById('apContratti').value) || 1);
+      const el = document.getElementById('previewApertura');
+      const marg = margineUnit(dir) * contratti;
+      el.innerHTML = `Margine impegnato: <strong>${fmt(marg)} €</strong> · Nessun P/L all'apertura`;
+      el.classList.add('visible');
+    }
+
+    function updatePreviewChiusura() {
+      const sel = document.getElementById('chPosizione');
+      const pl = parseFloat(document.getElementById('chImporto').value);
+      const el = document.getElementById('previewChiusura');
+      const pos = data.find(p => p.id == sel.value);
+      if (!pos || isNaN(pl)) {
+        el.classList.remove('visible');
+        return;
+      }
+      const residuo = residual(pos);
+      let contratti = parseInt(document.getElementById('chContratti').value) || 1;
+      contratti = Math.min(Math.max(1, contratti), residuo);
+      const marg = margineUnit(pos.dir) * contratti;
+      const roi = calcRoi(pl, marg);
+      el.innerHTML = `Margine della tranche chiusa: <strong>${fmt(marg)} €</strong> · ROI: <strong style="color:${roi>=0?'#22c55e':'#ef4444'}">${roi>=0?'+':''}${fmt(roi)}%</strong>`;
+      el.classList.add('visible');
+    }
+
+    // ========== AZIONI ==========
+    function addApertura() {
+      const dir = document.getElementById('apTipologia').value;
+      const contratti = Math.max(1, parseInt(document.getElementById('apContratti').value) || 1);
+      const strike = document.getElementById('apStrike').value.trim();
+      const nota = document.getElementById('apNota').value.trim();
+      data.push({
+        id: uid(),
+        dir,
+        strike,
+        contratti,
+        openKey: selectedDate,
+        nota,
+        chiusure: []
+      });
+      saveData();
+      document.getElementById('apContratti').value = '1';
+      document.getElementById('apStrike').value = '';
+      document.getElementById('apNota').value = '';
+      renderOpsList();
+      populatePosizioniChiusura();
+    }
+
+    function addChiusura() {
+      const sel = document.getElementById('chPosizione');
+      const pos = data.find(p => p.id == sel.value);
+      if (!pos) return;
+      const pl = parseFloat(document.getElementById('chImporto').value);
+      if (isNaN(pl)) {
+        document.getElementById('chImporto').focus();
+        return;
+      }
+      const residuo = residual(pos);
+      let contratti = parseInt(document.getElementById('chContratti').value) || 1;
+      if (contratti < 1) contratti = 1;
+      if (contratti > residuo) contratti = residuo;
+      const strike = (document.getElementById('chStrike').value || '').trim();
+      pos.chiusure.push({ key: selectedDate, contratti, pl, strike });
+      saveData();
+      document.getElementById('chImporto').value = '';
+      document.getElementById('chContratti').value = '1';
+      renderOpsList();
+      populatePosizioniChiusura();
+    }
+
+    function deletePosizione(id) {
+      const pos = data.find(p => p.id === id);
+      if (!pos) return;
+      const msg = pos.chiusure.length
+        ? 'Questa posizione ha già delle chiusure registrate: eliminandola spariranno anche i P/L correlati. Continuare?'
+        : 'Eliminare questa apertura?';
+      if (!confirm(msg)) return;
+      data = data.filter(p => p.id !== id);
+      saveData();
+      renderOpsList();
+      populatePosizioniChiusura();
+    }
+
+    function deleteChiusura(posId, index) {
+      const pos = data.find(p => p.id === posId);
+      if (!pos) return;
+      pos.chiusure.splice(index, 1);
+      saveData();
+      renderOpsList();
+      populatePosizioniChiusura();
+    }
+
+    // ========== EVENTS ==========
+    document.getElementById('prevMonth').addEventListener('click', () => {
+      current.setMonth(current.getMonth() - 1);
+      render();
+    });
+    document.getElementById('nextMonth').addEventListener('click', () => {
+      current.setMonth(current.getMonth() + 1);
+      render();
+    });
+    document.getElementById('capitale').addEventListener('change', () => {
+      saveData();
+      render();
+    });
+    document.getElementById('capitale').addEventListener('input', () => {
+      updateStats(current.getFullYear(), current.getMonth());
+      updateTarget(current.getFullYear(), current.getMonth());
+    });
+    document.getElementById('targetPct').addEventListener('change', () => {
+      saveData();
+      updateTarget(current.getFullYear(), current.getMonth());
+    });
+    document.getElementById('targetPct').addEventListener('input', () => updateTarget(current.getFullYear(), current.getMonth()));
+    document.getElementById('btnChiudi').addEventListener('click', closeModal);
+    document.getElementById('btnAggiungi').addEventListener('click', () => {
+      if (mode === 'apertura') addApertura();
+      else if (chMode === 'multipla') addChiusuraMulti();
+      else addChiusura();
+    });
+    document.getElementById('subSingola').addEventListener('click', () => setChMode('singola'));
+    document.getElementById('subMultipla').addEventListener('click', () => setChMode('multipla'));
+    document.getElementById('chImportoMulti').addEventListener('input', updatePreviewMulti);
+    document.getElementById('chImportoMulti').addEventListener('keydown', (e) => { if (e.key === 'Enter') addChiusuraMulti(); });
+    document.getElementById('modal').addEventListener('click', (e) => {
+      if (e.target.id === 'modal') closeModal();
+    });
+    document.getElementById('toggleApertura').addEventListener('click', () => setMode('apertura'));
+    document.getElementById('toggleChiusura').addEventListener('click', () => setMode('chiusura'));
+    document.getElementById('apTipologia').addEventListener('change', updatePreviewApertura);
+    document.getElementById('apContratti').addEventListener('input', updatePreviewApertura);
+    document.getElementById('chPosizione').addEventListener('change', () => {
+      const pos = data.find(p => p.id == document.getElementById('chPosizione').value);
+      if (pos) {
+        document.getElementById('chContratti').value = residual(pos);
+        document.getElementById('chStrike').value = pos.strike || '';
+      }
+      updatePreviewChiusura();
+    });
+    document.getElementById('chContratti').addEventListener('input', updatePreviewChiusura);
+    document.getElementById('chImporto').addEventListener('input', updatePreviewChiusura);
+    document.getElementById('chImporto').addEventListener('keydown', (e) => { if (e.key === 'Enter') addChiusura(); });
+    document.getElementById('chContratti').addEventListener('keydown', (e) => { if (e.key === 'Enter') addChiusura(); });
+    document.getElementById('apContratti').addEventListener('keydown', (e) => { if (e.key === 'Enter') addApertura(); });
+    document.getElementById('apStrike').addEventListener('keydown', (e) => { if (e.key === 'Enter') addApertura(); });
+    document.getElementById('apNota').addEventListener('keydown', (e) => { if (e.key === 'Enter') addApertura(); });
+
+    window.deletePosizione = deletePosizione;
+    window.deleteChiusura = deleteChiusura;
+
+    // Init
+    render();
+  </script>
+</body>
+</html>
