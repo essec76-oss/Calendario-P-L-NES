@@ -543,9 +543,9 @@
     <p class="hint">Clicca su un giorno per aggiungere aperture o chiusure. Le posizioni si aprono in un giorno e si chiudono (anche a tranche) in giorni successivi. I dati sono salvati su Supabase e sincronizzati tra i dispositivi.</p>
 
     <footer>
-      Dati salvati su Supabase • Sincronizzati tra dispositivi
-    </footer>
-  </div>
+      Dati salvati su Supabase • Sincronizzati tra dispositivi<br/>
+      <button class="btn-sm" id="btnImporta" style="margin-top:8px;">Importa dati dal browser</button>
+    </footer>  </div>
 
   <!-- Modal -->
   <div class="modal-overlay" id="modal">
@@ -1287,6 +1287,33 @@
       populatePosizioniChiusura();
     }
 
+          // ========== IMPORTAZIONE UNA TANTUM ==========
+    async function importaDaLocalStorage() {
+      const raw = localStorage.getItem('calendario-profitti-v3');
+      if (!raw) {
+        alert('Nessun dato trovato in questo browser.');
+        return;
+      }
+      const parsed = JSON.parse(raw);
+      const daImportare = parsed.posizioni || [];
+      if (!daImportare.length) {
+        alert('Nessuna posizione da importare.');
+        return;
+      }
+      if (!confirm(`Importare ${daImportare.length} posizioni su Supabase?`)) return;
+
+      if (parsed.capitale) document.getElementById('capitale').value = parsed.capitale;
+      if (parsed.targetPct) document.getElementById('targetPct').value = parsed.targetPct;
+
+      // unisce con i dati già presenti su Supabase, evitando duplicati
+      const idEsistenti = new Set(data.map(p => p.id));
+      data = [...data, ...daImportare.filter(p => !idEsistenti.has(p.id))];
+
+      await saveData();
+      render();
+      alert('Importazione completata. Controlla i dati, poi puoi eliminare il backup locale se vuoi.');
+    }
+    
     // ========== EVENTS ==========
     document.getElementById('prevMonth').addEventListener('click', () => {
       current.setMonth(current.getMonth() - 1);
@@ -1310,6 +1337,8 @@
     });
     document.getElementById('targetPct').addEventListener('input', () => updateTarget(current.getFullYear(), current.getMonth()));
     document.getElementById('btnChiudi').addEventListener('click', closeModal);
+    document.getElementById('btnChiudi').addEventListener('click', closeModal);
+document.getElementById('btnImporta').addEventListener('click', importaDaLocalStorage);
     document.getElementById('btnAggiungi').addEventListener('click', () => {
       if (mode === 'apertura') addApertura();
       else if (chMode === 'multipla') addChiusuraMulti();
