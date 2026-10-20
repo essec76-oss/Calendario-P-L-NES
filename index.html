@@ -424,6 +424,7 @@
       color: var(--text);
       flex-shrink: 0;
     }
+    .btn-sm:disabled { opacity: 0.4; cursor: not-allowed; }
     .btn-sm.danger { background: #7f1d1d; color: #fecaca; }
     .empty { text-align: center; color: var(--muted); padding: 12px 0; font-size: 0.9rem; }
     .hint { font-size: 0.8rem; color: var(--muted); margin-top: 8px; }
@@ -544,8 +545,9 @@
 
     <footer>
       Dati salvati su Supabase • Sincronizzati tra dispositivi<br/>
-      <button class="btn-sm" id="btnImporta" style="margin-top:8px;">Importa dati dal browser</button>
-    </footer>  </div>
+      <button class="btn-sm" id="btnImporta" style="margin-top:8px;" disabled>Importa dati dal browser</button>
+    </footer>
+  </div>
 
   <!-- Modal -->
   <div class="modal-overlay" id="modal">
@@ -1287,7 +1289,7 @@
       populatePosizioniChiusura();
     }
 
-          // ========== IMPORTAZIONE UNA TANTUM ==========
+    // ========== IMPORTAZIONE UNA TANTUM ==========
     async function importaDaLocalStorage() {
       const raw = localStorage.getItem('calendario-profitti-v3');
       if (!raw) {
@@ -1313,7 +1315,7 @@
       render();
       alert('Importazione completata. Controlla i dati, poi puoi eliminare il backup locale se vuoi.');
     }
-    
+
     // ========== EVENTS ==========
     document.getElementById('prevMonth').addEventListener('click', () => {
       current.setMonth(current.getMonth() - 1);
@@ -1337,8 +1339,7 @@
     });
     document.getElementById('targetPct').addEventListener('input', () => updateTarget(current.getFullYear(), current.getMonth()));
     document.getElementById('btnChiudi').addEventListener('click', closeModal);
-    document.getElementById('btnChiudi').addEventListener('click', closeModal);
-document.getElementById('btnImporta').addEventListener('click', importaDaLocalStorage);
+    document.getElementById('btnImporta').addEventListener('click', importaDaLocalStorage);
     document.getElementById('btnAggiungi').addEventListener('click', () => {
       if (mode === 'apertura') addApertura();
       else if (chMode === 'multipla') addChiusuraMulti();
@@ -1379,6 +1380,7 @@ document.getElementById('btnImporta').addEventListener('click', importaDaLocalSt
     loadData().then(d => {
       data = d;
       render();
+      document.getElementById('btnImporta').disabled = false;
     });
   </script>
 </body>
