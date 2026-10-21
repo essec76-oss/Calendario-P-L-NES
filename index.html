@@ -206,6 +206,24 @@
     #winRateSub .ws-label { color: var(--muted); }
     #winRateSub .ws-value { color: var(--text); font-weight: 600; }
     #winRateSub .ws-main { display: none; }
+    /* Toggle Mese / Totale (Wilson) */
+    .wilson-toggle {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 4px 0 6px;
+    }
+    .wilson-toggle button {
+      background: var(--bg);
+      color: var(--muted);
+      border: none;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .wilson-toggle button.active { background: rgba(59,130,246,0.25); color: #93c5fd; }
     /* Tooltip "i" */
     .ws-info {
       position: relative;
@@ -613,9 +631,6 @@
         <label>Moltiplicatore
           <input type="number" id="moltiplicatore" value="0.5" step="0.01" min="0" />
         </label>
-        <label>Fee / contratto (€)
-          <input type="number" id="feeContratto" value="2.41" step="0.01" min="0" />
-        </label>
       </div>
     </div>
 
@@ -671,6 +686,10 @@
       </div>
       <div class="stat-card">
         <div class="label">Stima abilità reale (intervallo di Wilson, 95%)<i class="ws-info" tabindex="0">i<span class="ws-tooltip">Come leggere questi numeri: la tua abilità reale di chiudere in profitto quasi certamente (fiducia 95%) è <em>dentro</em> l'intervallo mostrato — è l'intervallo come insieme a godere di questa garanzia, non i singoli estremi presi da soli. Il valore più utile è il <em>limite inferiore</em>: anche nello scenario più sfavorevole compatibile con i tuoi dati, quella percentuale di chiusure finirebbe in profitto. Il win rate osservato è solo la fotografia del campione: con poche chiusure è quasi sempre ottimista. Più chiusure registri, più l'intervallo si stringe e la stima diventa affidabile.</span></i></div>
+        <div class="wilson-toggle" id="wilsonToggle">
+          <button id="wsMese" class="active">Mese</button>
+          <button id="wsTotale">Totale</button>
+        </div>
         <div class="value" id="winRate">—</div>
         <div class="sub" id="winRateSub">nessuna chiusura nel mese</div>
       </div>
@@ -690,7 +709,7 @@
 
     <div class="calendar" id="calendar"></div>
 
-    <p class="hint">Clicca su un giorno per aggiungere aperture o chiusure. Le posizioni si aprono in un giorno e si chiudono (anche a tranche) in giorni successivi. Il <strong>prezzo medio di carico</strong> (LONG e SHORT) è mostrato in alto, pesato sui contratti residui. Inserendo lo strike di uscita, il P/L è calcolato in automatico: punti × contratti × moltiplicatore − fee per contratto (modificabile a mano). Il win rate è stimato sulle chiusure del mese con l'intervallo di confidenza di Wilson al 95%. I dati sono salvati su Supabase e sincronizzati tra i dispositivi.</p>
+    <p class="hint">Clicca su un giorno per aggiungere aperture o chiusure. Le posizioni si aprono in un giorno e si chiudono (anche a tranche) in giorni successivi. Il <strong>prezzo medio di carico</strong> (LONG e SHORT) è mostrato in alto, pesato sui contratti residui. Inserendo lo strike di uscita, il P/L è calcolato in automatico: punti × contratti × moltiplicatore (le commissioni si inseriscono a mano). Il win rate è stimato sulle chiusure con l'intervallo di confidenza di Wilson al 95%. I dati sono salvati su Supabase e sincronizzati tra i dispositivi.</p>
 
     <footer>
       Dati salvati su Supabase • Sincronizzati tra dispositivi<br/>
@@ -823,11 +842,11 @@
     const MARGINE_SHORT = 270;
     const CONFIG_KEY = 'calendario-profitti-config';
     let MOLTIPLICATORE = 0.5;
-    let FEE_CONTRATTO = 2.41;
     let mode = 'apertura'; // 'apertura' | 'chiusura'
     let chMode = 'singola'; // 'singola' | 'multipla'
     let singolaAuto = true;  // P/L singola calcolato automaticamente
     let multiAuto = true;    // P/L multipla calcolato automaticamente
+    let wsScope = 'mese';    // 'mese' | 'totale' (scope statistiche Wilson)
 
     function loadConfig() {
       try {
@@ -835,19 +854,15 @@
         if (raw) {
           const c = JSON.parse(raw);
           if (c.moltiplicatore != null) MOLTIPLICATORE = c.moltiplicatore;
-          if (c.fee != null) FEE_CONTRATTO = c.fee;
         }
       } catch (e) {}
       document.getElementById('moltiplicatore').value = MOLTIPLICATORE;
-      document.getElementById('feeContratto').value = FEE_CONTRATTO;
     }
 
     function saveConfig() {
       MOLTIPLICATORE = parseFloat(document.getElementById('moltiplicatore').value);
       if (isNaN(MOLTIPLICATORE) || MOLTIPLICATORE < 0) MOLTIPLICATORE = 0.5;
-      FEE_CONTRATTO = parseFloat(document.getElementById('feeContratto').value);
-      if (isNaN(FEE_CONTRATTO) || FEE_CONTRATTO < 0) FEE_CONTRATTO = 2.41;
-      try { localStorage.setItem(CONFIG_KEY, JSON.stringify({ moltiplicatore: MOLTIPLICATORE, fee: FEE_CONTRATTO })); } catch (e) {}
+      try { localStorage.setItem(CONFIG_KEY, JSON.stringify({ moltiplicatore: MOLTIPLICATORE })); } catch (e) {}
     }
 
     // parse numero (accetta virgola o punto)
@@ -1022,7 +1037,7 @@
       const info = pmcRiferimento(pos, selectedDate);
       if (!info) return NaN;
       const punti = puntiUscita(pos.dir, info.media, uscita);
-      const pl = punti * contratti * MOLTIPLICATORE - FEE_CONTRATTO * contratti;
+      const pl = punti * contratti * MOLTIPLICATORE;
       return Math.round(pl * 100) / 100;
     }
 
@@ -1490,7 +1505,7 @@
           const dettaglio = conPl.map(x => {
             const info = pmcRiferimento(x.pos, selectedDate);
             const punti = puntiUscita(x.pos.dir, info.media, uscita);
-            return `#${x.pos.id}: ${punti >= 0 ? '+' : ''}${fmtMedia(punti)} pt × ${x.contratti} × ${MOLTIPLICATORE} − fee → <strong>${x.pl >= 0 ? '+' : ''}${fmt(x.pl)}</strong>`;
+            return `#${x.pos.id}: ${punti >= 0 ? '+' : ''}${fmtMedia(punti)} pt × ${x.contratti} × ${MOLTIPLICATORE} → <strong>${x.pl >= 0 ? '+' : ''}${fmt(x.pl)}</strong>`;
           }).join('<br/>');
           el.innerHTML = `Uscita <strong>${fmtMedia(uscita)}</strong> · <strong>${totCtr} contr.</strong> · margine ${fmt(totMarg)} € · P/L tot <strong style="color:${tot>=0?'#22c55e':'#ef4444'}">${tot>=0?'+':''}${fmt(tot)}</strong> · ROI ${roi>=0?'+':''}${fmt(roi)}%<br/><span style="font-size:0.75rem;color:var(--muted)">${dettaglio}</span>`;
           el.classList.add('visible');
@@ -1649,19 +1664,16 @@
       const uscita = parseNum(document.getElementById('chStrike').value);
       const info = pmcRiferimento(pos, selectedDate);
 
-      // --- P/L automatico: punti dal PMC di riferimento x contratti x moltiplicatore − fee ---
+      // --- P/L automatico: punti dal PMC di riferimento x contratti x moltiplicatore ---
       if (singolaAuto && !isNaN(uscita) && info) {
         const punti = puntiUscita(pos.dir, info.media, uscita);
-        const lordo = punti * contratti * MOLTIPLICATORE;
-        const fee = FEE_CONTRATTO * contratti;
-        const auto = Math.round((lordo - fee) * 100) / 100;
+        const auto = Math.round(punti * contratti * MOLTIPLICATORE * 100) / 100;
         document.getElementById('chImporto').value = auto;
         const marg = margineUnit(pos.dir) * contratti;
         const roi = calcRoi(auto, marg);
         const primaChiusura = pos.chiusure.length === 0;
         el.innerHTML = `PMC ${pos.dir}${primaChiusura ? '' : ' (congelato all\'inizio delle chiusure)'}: <strong>${fmtMedia(info.media)}</strong> · uscita <strong>${fmtMedia(uscita)}</strong> · ${punti >= 0 ? '+' : ''}${fmtMedia(punti)} punti<br/>` +
-          `${fmtMedia(punti)} × ${contratti} contr. × ${MOLTIPLICATORE} = <strong>${lordo >= 0 ? '+' : ''}${fmt(lordo)}</strong> − fee ${fmt(fee)} = ` +
-          `<strong style="color:${auto>=0?'#22c55e':'#ef4444'}">${auto>=0?'+':''}${fmt(auto)}</strong> · ROI ${roi>=0?'+':''}${fmt(roi)}%`;
+          `${fmtMedia(punti)} × ${contratti} contr. × ${MOLTIPLICATORE} = <strong style="color:${auto>=0?'#22c55e':'#ef4444'}">${auto>=0?'+':''}${fmt(auto)}</strong> · ROI ${roi>=0?'+':''}${fmt(roi)}%`;
         el.classList.add('visible');
         return;
       }
@@ -1796,6 +1808,8 @@
       updateTarget(current.getFullYear(), current.getMonth());
     });
     document.getElementById('targetPct').addEventListener('input', () => updateTarget(current.getFullYear(), current.getMonth()));
+    document.getElementById('wsMese').addEventListener('click', () => setWsScope('mese'));
+    document.getElementById('wsTotale').addEventListener('click', () => setWsScope('totale'));
     document.getElementById('btnChiudi').addEventListener('click', closeModal);
     document.getElementById('btnImporta').addEventListener('click', importaDaLocalStorage);
     document.getElementById('btnAggiungi').addEventListener('click', () => {
@@ -1836,7 +1850,6 @@
     document.getElementById('apNota').addEventListener('keydown', (e) => { if (e.key === 'Enter') addApertura(); });
 
     document.getElementById('moltiplicatore').addEventListener('change', () => { saveConfig(); updatePreviewChiusura(); updatePreviewMulti(); });
-    document.getElementById('feeContratto').addEventListener('change', () => { saveConfig(); updatePreviewChiusura(); updatePreviewMulti(); });
 
     window.deletePosizione = deletePosizione;
     window.deleteChiusura = deleteChiusura;
