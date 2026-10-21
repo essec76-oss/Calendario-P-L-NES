@@ -973,11 +973,17 @@
         }
       });
       if (sommaCtr === 0) return null;
+      let senzaPrezzoCtr = 0, residuoCtr = 0;
+      aperte.forEach(p => {
+        residuoCtr += residual(p);
+        if (isNaN(parseNum(p.strike))) senzaPrezzoCtr += p.contratti;
+      });
       return {
         media: sommaPrezzi / sommaCtr,
         contratti: sommaCtr,
         posizioni: aperte.length,
-        senzaPrezzo
+        senzaPrezzo,
+        residuoCtr
       };
     }
 
@@ -991,7 +997,7 @@
           elS.textContent = 'nessuna posizione';
         } else {
           elV.textContent = fmtMedia(info.media);
-          elS.textContent = `${info.posizioni} pos. · ${info.contratti} contr.` + (info.senzaPrezzo ? ` · ${info.senzaPrezzo} contr. senza prezzo` : '');
+          elS.textContent = `${info.posizioni} pos. · ${info.contratti} contr. caricati · ${info.residuoCtr} residui` + (info.senzaPrezzo ? ` · ${info.senzaPrezzo} contr. senza prezzo` : '');
         }
       });
     }
