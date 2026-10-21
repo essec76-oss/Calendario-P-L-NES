@@ -205,7 +205,6 @@
     #winRateSub .ws-row { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
     #winRateSub .ws-label { color: var(--muted); }
     #winRateSub .ws-value { color: var(--text); font-weight: 600; }
-    #winRateSub .ws-main { display: none; }
     /* Toggle Mese / Totale (Wilson) */
     .wilson-toggle {
       display: inline-flex;
@@ -1213,9 +1212,12 @@
 
     function updateStats(year, month) {
       const prefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+      const perimetroMese = wsScope === 'mese';
+
+      // Chiusure nel perimetro scelto (mese corrente oppure tutte)
       let numChiusure = 0, wins = 0, losses = 0, be = 0;
       data.forEach(p => p.chiusure.forEach(c => {
-        if (c.key.startsWith(prefix)) {
+        if (!perimetroMese || c.key.startsWith(prefix)) {
           numChiusure++;
           if (c.pl > 0) wins++;
           else if (c.pl < 0) losses++;
@@ -1239,22 +1241,30 @@
       const elW = document.getElementById('winRate');
       const elWS = document.getElementById('winRateSub');
       const n = wins + losses;
+      const etichetta = perimetroMese ? 'Nel mese:' : 'Totale:';
+      const nessuna = perimetroMese ? 'nessuna chiusura nel mese' : 'nessuna chiusura registrata';
       if (n === 0) {
         elW.textContent = '—';
         elW.className = 'value';
-        elWS.textContent = be ? `${be} chiusur${be === 1 ? 'a' : 'e'} break-even, nessuna vincente/perdente` : 'nessuna chiusura nel mese';
+        elWS.textContent = be ? `${be} chiusur${be === 1 ? 'a' : 'e'} break-even, nessuna vincente/perdente` : nessuna;
       } else {
         const z = 1.96;
         const w = wilsonInterval(wins, n, z);
-        // L'intervallo è il dato principale: è la stima prudente dell'abilità reale
         elW.innerHTML = `${fmtMedia(w.lo * 100)}% <span style="color:var(--muted);font-size:1.1rem">–</span> ${fmtMedia(w.hi * 100)}%`;
         elW.className = 'value ' + (w.p >= 0.5 ? 'positive' : 'negative');
         const prob50 = probWinRateSopra(wins, n, 0.5);
         elWS.innerHTML =
-          `<div class="ws-row"><span class="ws-label">Nel mese:</span> <span class="ws-value">${wins} vittorie</span> <span class="ws-label">/</span> <span class="ws-value">${losses} perdite</span>${be ? ` <span class="ws-label">/ ${be} break-even</span>` : ''} <span class="ws-label">· win rate osservato</span> <span class="ws-value">${fmtMedia(w.p * 100)}%</span></div>` +
+          `<div class="ws-row"><span class="ws-label">${etichetta}</span> <span class="ws-value">${wins} vittorie</span> <span class="ws-label">/</span> <span class="ws-value">${losses} perdite</span>${be ? ` <span class="ws-label">/ ${be} break-even</span>` : ''} <span class="ws-label">· win rate osservato</span> <span class="ws-value">${fmtMedia(w.p * 100)}%</span></div>` +
           `<div class="wilson-bar" title="Fascia blu = dove sta quasi certamente la tua abilità reale, linea = win rate osservato"><div class="wilson-range" style="left:${(w.lo * 100).toFixed(2)}%;width:${((w.hi - w.lo) * 100).toFixed(2)}%"></div><div class="wilson-point" style="left:${(w.p * 100).toFixed(2)}%"></div></div>` +
           `<div class="ws-row" style="margin-top:6px"><span class="ws-label">Probabilità che l'abilità reale sia &gt; 50%:</span> <span class="ws-value">${fmtMedia(prob50 * 100)}%</span></div>`;
       }
+    }
+
+    function setWsScope(scope) {
+      wsScope = scope;
+      document.getElementById('wsMese').classList.toggle('active', scope === 'mese');
+      document.getElementById('wsTotale').classList.toggle('active', scope === 'totale');
+      updateStats(current.getFullYear(), current.getMonth());
     }
 
     // ========== TARGET PANNEL ==========
