@@ -63,6 +63,37 @@
       text-align: right;
     }
     .capitale-box input:focus { outline: 2px solid var(--accent); }
+    /* PMC + config box */
+    .pmc-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px 20px;
+    }
+    .pmc-item { display: flex; flex-direction: column; gap: 2px; }
+    .pmc-item .t-label { font-size: 0.75rem; color: var(--muted); }
+    .pmc-item .t-value { font-size: 1.05rem; font-weight: 700; }
+    .pmc-item .t-value.long { color: #93c5fd; }
+    .pmc-item .t-value.short { color: #d8b4fe; }
+    .pmc-item .t-sub { font-size: 0.68rem; color: var(--muted); font-weight: 400; }
+    .pmc-config { display: flex; gap: 10px; align-items: center; }
+    .pmc-config label { font-size: 0.75rem; color: var(--muted); }
+    .pmc-config input {
+      width: 70px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 5px 8px;
+      border-radius: 6px;
+      text-align: right;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+    .pmc-config input:focus { outline: 2px solid var(--accent); }
     /* Target panel */
     .target-panel {
       background: var(--card);
@@ -474,6 +505,27 @@
       </div>
     </header>
 
+    <div class="pmc-box">
+      <div class="pmc-item">
+        <div class="t-label">Prezzo medio carico LONG</div>
+        <div class="t-value long" id="pmcLong">—</div>
+        <div class="t-sub" id="pmcLongSub">nessuna posizione</div>
+      </div>
+      <div class="pmc-item">
+        <div class="t-label">Prezzo medio carico SHORT</div>
+        <div class="t-value short" id="pmcShort">—</div>
+        <div class="t-sub" id="pmcShortSub">nessuna posizione</div>
+      </div>
+      <div class="pmc-config" style="margin-left:auto;">
+        <label>Moltiplicatore
+          <input type="number" id="moltiplicatore" value="0.5" step="0.01" min="0" />
+        </label>
+        <label>Fee / contratto (€)
+          <input type="number" id="feeContratto" value="2.41" step="0.01" min="0" />
+        </label>
+      </div>
+    </div>
+
     <div class="target-panel">
       <div class="target-row">
         <div class="target-item target-pct">
@@ -542,7 +594,7 @@
 
     <div class="calendar" id="calendar"></div>
 
-    <p class="hint">Clicca su un giorno per aggiungere aperture o chiusure. Le posizioni si aprono in un giorno e si chiudono (anche a tranche) in giorni successivi. I dati sono salvati su Supabase e sincronizzati tra i dispositivi.</p>
+    <p class="hint">Clicca su un giorno per aggiungere aperture o chiusure. Le posizioni si aprono in un giorno e si chiudono (anche a tranche) in giorni successivi. Il <strong>prezzo medio di carico</strong> (LONG e SHORT) è mostrato in alto, pesato sui contratti residui. Inserendo lo strike di uscita, il P/L è calcolato in automatico: punti × contratti × moltiplicatore − fee per contratto (modificabile a mano). I dati sono salvati su Supabase e sincronizzati tra i dispositivi.</p>
 
     <footer>
       Dati salvati su Supabase • Sincronizzati tra dispositivi<br/>
@@ -579,8 +631,8 @@
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label for="apStrike">Strike</label>
-            <input type="text" id="apStrike" placeholder="es. 18500" />
+            <label for="apStrike">Strike (prezzo entrata)</label>
+            <input type="text" id="apStrike" placeholder="es. 7000 — serve per PMC e P/L auto" />
           </div>
           <div class="form-group">
             <label for="apNota">Nota (opzionale)</label>
@@ -608,8 +660,8 @@
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label for="chStrike">Strike chiusura</label>
-              <input type="text" id="chStrike" placeholder="es. 18700" />
+              <label for="chStrike">Strike di uscita (ricalcola il P/L)</label>
+              <input type="text" id="chStrike" placeholder="es. 7050" />
             </div>
             <div class="form-group">
               <label for="chContratti">Contratti da chiudere</label>
@@ -617,7 +669,7 @@
             </div>
           </div>
           <div class="form-group">
-            <label for="chImporto">P/L della chiusura (€)</label>
+            <label for="chImporto">P/L della chiusura (€, calcolato in automatico dal PMC)</label>
             <input type="number" id="chImporto" step="0.01" placeholder="es. 125.50 oppure -80" />
           </div>
           <div class="preview-roi" id="previewChiusura"></div>
@@ -627,7 +679,7 @@
         <div id="chMultipla" style="display:none;">
           <div class="form-row">
             <div class="form-group">
-              <label for="chStrikeMulti">Strike di uscita (comune)</label>
+              <label for="chStrikeMulti">Strike di uscita (comune, ricalcola il P/L)</label>
               <input type="text" id="chStrikeMulti" placeholder="es. 18700" />
             </div>
             <div class="form-group">
@@ -655,13 +707,59 @@
     // ========== SUPABASE ==========
     const SUPABASE_URL = 'https://tpsakiwumpxcevnrfdic.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_jRgYc27V1-y2PJbPVV9E4g_e407_KUW';
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    let supabaseClient = null;
+    let useLocalFallback = false;
+    const LS_KEY = 'calendario-profitti-remote-fallback';
+
+    async function initSupabase() {
+      try {
+        if (window.supabase && window.supabase.createClient) {
+          supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        }
+      } catch (e) {
+        console.error('Supabase non disponibile:', e);
+      }
+      if (!supabaseClient) useLocalFallback = true;
+    }
 
     // ========== CONSTANTS ==========
     const MARGINE_LONG = 350;
     const MARGINE_SHORT = 270;
+    const CONFIG_KEY = 'calendario-profitti-config';
+    let MOLTIPLICATORE = 0.5;
+    let FEE_CONTRATTO = 2.41;
     let mode = 'apertura'; // 'apertura' | 'chiusura'
     let chMode = 'singola'; // 'singola' | 'multipla'
+    let singolaAuto = true;  // P/L singola calcolato automaticamente
+    let multiAuto = true;    // P/L multipla calcolato automaticamente
+
+    function loadConfig() {
+      try {
+        const raw = localStorage.getItem(CONFIG_KEY);
+        if (raw) {
+          const c = JSON.parse(raw);
+          if (c.moltiplicatore != null) MOLTIPLICATORE = c.moltiplicatore;
+          if (c.fee != null) FEE_CONTRATTO = c.fee;
+        }
+      } catch (e) {}
+      document.getElementById('moltiplicatore').value = MOLTIPLICATORE;
+      document.getElementById('feeContratto').value = FEE_CONTRATTO;
+    }
+
+    function saveConfig() {
+      MOLTIPLICATORE = parseFloat(document.getElementById('moltiplicatore').value);
+      if (isNaN(MOLTIPLICATORE) || MOLTIPLICATORE < 0) MOLTIPLICATORE = 0.5;
+      FEE_CONTRATTO = parseFloat(document.getElementById('feeContratto').value);
+      if (isNaN(FEE_CONTRATTO) || FEE_CONTRATTO < 0) FEE_CONTRATTO = 2.41;
+      try { localStorage.setItem(CONFIG_KEY, JSON.stringify({ moltiplicatore: MOLTIPLICATORE, fee: FEE_CONTRATTO })); } catch (e) {}
+    }
+
+    // parse numero (accetta virgola o punto)
+    function parseNum(v) {
+      if (v == null || v === '') return NaN;
+      const n = parseFloat(String(v).replace(',', '.'));
+      return isNaN(n) ? NaN : n;
+    }
 
     // ========== STATE ==========
     let current = new Date();
@@ -671,6 +769,18 @@
     // data = [ {id, dir, strike, contratti, openKey, nota, chiusure:[{key, contratti, pl, strike}]} ]
 
     async function loadData() {
+      if (useLocalFallback || !supabaseClient) {
+        try {
+          const raw = localStorage.getItem(LS_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed.capitale != null) document.getElementById('capitale').value = parsed.capitale;
+            if (parsed.target_pct != null) document.getElementById('targetPct').value = parsed.target_pct;
+            return parsed.posizioni || [];
+          }
+        } catch (e) {}
+        return [];
+      }
       const { data: pos, error: e1 } = await supabaseClient.from('posizioni').select('*');
       const { data: imp, error: e2 } = await supabaseClient.from('impostazioni').select('*').eq('id', 1).maybeSingle();
       if (e1 || e2) {
@@ -695,6 +805,12 @@
     async function saveData() {
       const capitale = parseFloat(document.getElementById('capitale').value) || 5000;
       const targetPct = parseFloat(document.getElementById('targetPct').value) || 4;
+      renderPmcHeader();
+
+      if (useLocalFallback || !supabaseClient) {
+        try { localStorage.setItem(LS_KEY, JSON.stringify({ capitale, target_pct: targetPct, posizioni: data })); } catch (e) {}
+        return;
+      }
 
       const { error: e1 } = await supabaseClient.from('impostazioni').upsert({ id: 1, capitale, target_pct: targetPct });
       if (e1) console.error('Errore salvataggio impostazioni:', e1);
@@ -715,6 +831,7 @@
     }
 
     async function deletePosizioneRemota(id) {
+      if (useLocalFallback || !supabaseClient) return;
       const { error } = await supabaseClient.from('posizioni').delete().eq('id', id);
       if (error) console.error('Errore eliminazione:', error);
     }
@@ -735,6 +852,63 @@
 
     function posAperteAll() {
       return data.filter(p => residual(p) > 0);
+    }
+
+    // ========== PREZZO MEDIO CARICO (PMC) ==========
+    // Media pesata sui contratti residui delle posizioni aperte di una direzione
+    function pmcDir(dir) {
+      const aperte = posAperteAll().filter(p => p.dir === dir);
+      let sommaPrezzi = 0, sommaCtr = 0, senzaPrezzo = 0;
+      aperte.forEach(p => {
+        const r = residual(p);
+        const prezzo = parseNum(p.strike);
+        if (isNaN(prezzo)) {
+          senzaPrezzo += r;
+        } else {
+          sommaPrezzi += prezzo * r;
+          sommaCtr += r;
+        }
+      });
+      if (sommaCtr === 0) return null;
+      return {
+        media: sommaPrezzi / sommaCtr,
+        contratti: sommaCtr,
+        posizioni: aperte.length,
+        senzaPrezzo
+      };
+    }
+
+    function renderPmcHeader() {
+      [['LONG', 'pmcLong', 'pmcLongSub'], ['SHORT', 'pmcShort', 'pmcShortSub']].forEach(([dir, idV, idS]) => {
+        const info = pmcDir(dir);
+        const elV = document.getElementById(idV);
+        const elS = document.getElementById(idS);
+        if (!info) {
+          elV.textContent = '—';
+          elS.textContent = 'nessuna posizione';
+        } else {
+          elV.textContent = fmtMedia(info.media);
+          elS.textContent = `${info.posizioni} pos. · ${info.contratti} contr.` + (info.senzaPrezzo ? ` · ${info.senzaPrezzo} contr. senza prezzo` : '');
+        }
+      });
+    }
+
+    function fmtMedia(n) {
+      return n.toLocaleString('it-IT', { maximumFractionDigits: 2 });
+    }
+
+    // ========== P/L AUTOMATICO ==========
+    // P/L = punti di differenza x n° contratti x moltiplicatore − fee x n° contratti
+    function puntiUscita(dir, pmc, uscita) {
+      return dir === 'LONG' ? (uscita - pmc) : (pmc - uscita);
+    }
+
+    function autoPlPos(pos, contratti, uscita) {
+      const info = pmcDir(pos.dir);
+      if (!info) return NaN;
+      const punti = puntiUscita(pos.dir, info.media, uscita);
+      const pl = punti * contratti * MOLTIPLICATORE - FEE_CONTRATTO * contratti;
+      return Math.round(pl * 100) / 100;
     }
 
     // eventi di un giorno
@@ -798,6 +972,7 @@
 
       updateStats(year, month);
       updateTarget(year, month);
+      renderPmcHeader();
     }
 
     function createDayCell(y, m, d, other, isToday = false) {
@@ -992,6 +1167,8 @@
       document.getElementById('previewApertura').classList.remove('visible');
       document.getElementById('previewChiusura').classList.remove('visible');
       document.getElementById('previewChiusuraMulti').classList.remove('visible');
+      singolaAuto = true;
+      multiAuto = true;
       populatePosizioniChiusura();
     }
 
@@ -1085,11 +1262,43 @@
       document.getElementById('subMultipla').classList.toggle('active', m === 'multipla');
     }
 
+    // P/L automatico per ogni posizione selezionata (dal PMC della direzione)
+    function autoPlMulti(sel, uscita) {
+      return sel.map(x => ({ ...x, pl: autoPlPos(x.pos, x.contratti, uscita) }));
+    }
+
     function updatePreviewMulti() {
       const el = document.getElementById('previewChiusuraMulti');
-      const pl = parseFloat(document.getElementById('chImportoMulti').value);
       const sel = multiSelection();
-      if (!sel.length || isNaN(pl)) {
+      if (!sel.length) {
+        el.classList.remove('visible');
+        return;
+      }
+      const uscita = parseNum(getStrikeMulti());
+
+      // --- P/L automatico: ricalcolo per ogni posizione rispetto al PMC ---
+      if (multiAuto && !isNaN(uscita)) {
+        const conPl = autoPlMulti(sel, uscita);
+        if (conPl.every(x => !isNaN(x.pl))) {
+          const tot = conPl.reduce((s, x) => s + x.pl, 0);
+          const totCtr = conPl.reduce((s, x) => s + x.contratti, 0);
+          const totMarg = conPl.reduce((s, x) => s + margineUnit(x.pos.dir) * x.contratti, 0);
+          const roi = calcRoi(tot, totMarg);
+          document.getElementById('chImportoMulti').value = Math.round(tot * 100) / 100;
+          const dettaglio = conPl.map(x => {
+            const info = pmcDir(x.pos.dir);
+            const punti = puntiUscita(x.pos.dir, info.media, uscita);
+            return `#${x.pos.id}: ${punti >= 0 ? '+' : ''}${fmtMedia(punti)} pt × ${x.contratti} × ${MOLTIPLICATORE} − fee → <strong>${x.pl >= 0 ? '+' : ''}${fmt(x.pl)}</strong>`;
+          }).join('<br/>');
+          el.innerHTML = `Uscita <strong>${fmtMedia(uscita)}</strong> · <strong>${totCtr} contr.</strong> · margine ${fmt(totMarg)} € · P/L tot <strong style="color:${tot>=0?'#22c55e':'#ef4444'}">${tot>=0?'+':''}${fmt(tot)}</strong> · ROI ${roi>=0?'+':''}${fmt(roi)}%<br/><span style="font-size:0.75rem;color:var(--muted)">${dettaglio}</span>`;
+          el.classList.add('visible');
+          return;
+        }
+      }
+
+      // --- Ripartizione manuale proporzionale ai contratti ---
+      const pl = parseFloat(document.getElementById('chImportoMulti').value);
+      if (isNaN(pl)) {
         el.classList.remove('visible');
         return;
       }
@@ -1106,17 +1315,36 @@
     }
 
     function addChiusuraMulti() {
-      const pl = parseFloat(document.getElementById('chImportoMulti').value);
       const sel = multiSelection();
+      if (!sel.length) return;
+      const uscita = parseNum(getStrikeMulti());
+      const stk = getStrikeMulti();
+
+      // --- P/L automatico per posizione (se disponibile) ---
+      if (multiAuto && !isNaN(uscita)) {
+        const conPl = autoPlMulti(sel, uscita);
+        if (conPl.every(x => !isNaN(x.pl))) {
+          conPl.forEach(x => {
+            x.pos.chiusure.push({ key: selectedDate, contratti: x.contratti, pl: x.pl, strike: stk });
+          });
+          saveData();
+          document.getElementById('chImportoMulti').value = '';
+          renderOpsList();
+          renderPosCheckList();
+          populatePosizioniChiusura();
+          return;
+        }
+      }
+
+      const pl = parseFloat(document.getElementById('chImportoMulti').value);
       if (isNaN(pl)) {
         document.getElementById('chImportoMulti').focus();
         return;
       }
-      if (!sel.length) return;
       const totCtr = sel.reduce((s, x) => s + x.contratti, 0);
       sel.forEach(x => {
         const quota = pl * (x.contratti / totCtr);
-        x.pos.chiusure.push({ key: selectedDate, contratti: x.contratti, pl: quota, strike: getStrikeMulti() });
+        x.pos.chiusure.push({ key: selectedDate, contratti: x.contratti, pl: quota, strike: stk });
       });
       saveData();
       document.getElementById('chImportoMulti').value = '';
@@ -1207,19 +1435,44 @@
 
     function updatePreviewChiusura() {
       const sel = document.getElementById('chPosizione');
-      const pl = parseFloat(document.getElementById('chImporto').value);
       const el = document.getElementById('previewChiusura');
       const pos = data.find(p => p.id == sel.value);
-      if (!pos || isNaN(pl)) {
+      if (!pos) {
         el.classList.remove('visible');
         return;
       }
       const residuo = residual(pos);
       let contratti = parseInt(document.getElementById('chContratti').value) || 1;
       contratti = Math.min(Math.max(1, contratti), residuo);
+      const uscita = parseNum(document.getElementById('chStrike').value);
+      const info = pmcDir(pos.dir);
+
+      // --- P/L automatico: punti dal PMC x contratti x moltiplicatore − fee ---
+      if (singolaAuto && !isNaN(uscita) && info) {
+        const punti = puntiUscita(pos.dir, info.media, uscita);
+        const lordo = punti * contratti * MOLTIPLICATORE;
+        const fee = FEE_CONTRATTO * contratti;
+        const auto = Math.round((lordo - fee) * 100) / 100;
+        document.getElementById('chImporto').value = auto;
+        const marg = margineUnit(pos.dir) * contratti;
+        const roi = calcRoi(auto, marg);
+        el.innerHTML = `PMC ${pos.dir}: <strong>${fmtMedia(info.media)}</strong> · uscita <strong>${fmtMedia(uscita)}</strong> · ${punti >= 0 ? '+' : ''}${fmtMedia(punti)} punti<br/>` +
+          `${fmtMedia(punti)} × ${contratti} contr. × ${MOLTIPLICATORE} = <strong>${lordo >= 0 ? '+' : ''}${fmt(lordo)}</strong> − fee ${fmt(fee)} = ` +
+          `<strong style="color:${auto>=0?'#22c55e':'#ef4444'}">${auto>=0?'+':''}${fmt(auto)}</strong> · ROI ${roi>=0?'+':''}${fmt(roi)}%`;
+        el.classList.add('visible');
+        return;
+      }
+
+      // --- P/L manuale (già inserito o PMC non disponibile) ---
+      const pl = parseFloat(document.getElementById('chImporto').value);
+      if (isNaN(pl)) {
+        el.classList.remove('visible');
+        return;
+      }
       const marg = margineUnit(pos.dir) * contratti;
       const roi = calcRoi(pl, marg);
-      el.innerHTML = `Margine della tranche chiusa: <strong>${fmt(marg)} €</strong> · ROI: <strong style="color:${roi>=0?'#22c55e':'#ef4444'}">${roi>=0?'+':''}${fmt(roi)}%</strong>`;
+      el.innerHTML = `Margine della tranche chiusa: <strong>${fmt(marg)} €</strong> · ROI: <strong style="color:${roi>=0?'#22c55e':'#ef4444'}">${roi>=0?'+':''}${fmt(roi)}%</strong>` +
+        (info ? `<br/><span style="font-size:0.75rem;color:var(--muted)">PMC ${pos.dir}: ${fmtMedia(info.media)} — modifica lo strike di uscita per ricalcolare in automatico</span>` : '');
       el.classList.add('visible');
     }
 
@@ -1277,6 +1530,7 @@
       if (!confirm(msg)) return;
       data = data.filter(p => p.id !== id);
       deletePosizioneRemota(id);
+      renderPmcHeader();
       renderOpsList();
       populatePosizioniChiusura();
     }
@@ -1349,6 +1603,9 @@
     document.getElementById('subSingola').addEventListener('click', () => setChMode('singola'));
     document.getElementById('subMultipla').addEventListener('click', () => setChMode('multipla'));
     document.getElementById('chImportoMulti').addEventListener('input', updatePreviewMulti);
+    document.getElementById('chImportoMulti').addEventListener('input', () => { multiAuto = false; });
+    document.getElementById('chStrikeMulti').addEventListener('input', () => { multiAuto = true; updatePreviewMulti(); });
+    document.getElementById('chStrikeMulti').addEventListener('keydown', (e) => { if (e.key === 'Enter') addChiusuraMulti(); });
     document.getElementById('chImportoMulti').addEventListener('keydown', (e) => { if (e.key === 'Enter') addChiusuraMulti(); });
     document.getElementById('modal').addEventListener('click', (e) => {
       if (e.target.id === 'modal') closeModal();
@@ -1366,23 +1623,29 @@
       updatePreviewChiusura();
     });
     document.getElementById('chContratti').addEventListener('input', updatePreviewChiusura);
+    document.getElementById('chStrike').addEventListener('input', () => { singolaAuto = true; updatePreviewChiusura(); });
     document.getElementById('chImporto').addEventListener('input', updatePreviewChiusura);
+    document.getElementById('chImporto').addEventListener('input', () => { singolaAuto = false; });
     document.getElementById('chImporto').addEventListener('keydown', (e) => { if (e.key === 'Enter') addChiusura(); });
     document.getElementById('chContratti').addEventListener('keydown', (e) => { if (e.key === 'Enter') addChiusura(); });
     document.getElementById('apContratti').addEventListener('keydown', (e) => { if (e.key === 'Enter') addApertura(); });
     document.getElementById('apStrike').addEventListener('keydown', (e) => { if (e.key === 'Enter') addApertura(); });
     document.getElementById('apNota').addEventListener('keydown', (e) => { if (e.key === 'Enter') addApertura(); });
 
+    document.getElementById('moltiplicatore').addEventListener('change', () => { saveConfig(); updatePreviewChiusura(); updatePreviewMulti(); });
+    document.getElementById('feeContratto').addEventListener('change', () => { saveConfig(); updatePreviewChiusura(); updatePreviewMulti(); });
+
     window.deletePosizione = deletePosizione;
     window.deleteChiusura = deleteChiusura;
 
     // Init
+    loadConfig();
     render();
-    loadData().then(d => {
+    initSupabase().then(() => loadData().then(d => {
       data = d;
       render();
       document.getElementById('btnImporta').disabled = false;
-    });
+    }));
   </script>
 </body>
 </html>
