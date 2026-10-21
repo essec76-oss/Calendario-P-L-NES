@@ -1329,14 +1329,15 @@
       document.getElementById('targetPace').style.left = Math.min(100, pacePct) + '%';
 
       let giornoMsg;
-      if (isMeseCorrente) {
-        const todayKey = `${y}-${String(m + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const giorniRimanenti = daysInMonth - now.getDate() + 1; // oggi compreso
+      const quotaRimanente = Math.max(0, target - realizzato) / giorniRimanenti;
+      if (isMeseCorrente) {        const todayKey = `${y}-${String(m + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         const plOggi = plChiusureDelGiorno(todayKey);
-        const deltaGiorno = plOggi - quota;
+        const deltaGiorno = plOggi - quotaRimanente;  
         if (plOggi === 0 && !chiusureDelGiorno(todayKey).length) {
-          giornoMsg = `Oggi ancora nessuna chiusura · obiettivo del giorno: <strong>€ ${fmt(quota)}</strong>`;
+          giornoMsg = `Oggi ancora nessuna chiusura · obiettivo del giorno: <strong>€ ${fmt(quotaRimanente)}</strong>`;
         } else if (deltaGiorno >= 0) {
-          giornoMsg = `Oggi: <span class="ok">✓ obiettivo del giorno centrato</span> (${plOggi >= 0 ? '+' : ''}€ ${fmt(plOggi)} vs € ${fmt(quota)})`;
+          giornoMsg = `Oggi: <span class="ok">✓ obiettivo del giorno centrato</span> (${plOggi >= 0 ? '+' : ''}€ ${fmt(plOggi)} vs € ${fmt(quotaRimanente)})`;
         } else {
           giornoMsg = `Oggi: <span class="ko">obiettivo non ancora centrato</span> (${plOggi >= 0 ? '+' : ''}€ ${fmt(plOggi)} — mancano € ${fmt(-deltaGiorno)})`;
         }
