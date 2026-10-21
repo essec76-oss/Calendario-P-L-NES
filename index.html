@@ -17,8 +17,6 @@
       --green: #22c55e;
       --red: #ef4444;
       --yellow: #eab308;
-      --long: #3b82f6;
-      --short: #a855f7;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -73,12 +71,13 @@
       flex-wrap: wrap;
       align-items: center;
       gap: 12px 20px;
+      margin-bottom: 20px;
     }
     .pmc-item { display: flex; flex-direction: column; gap: 2px; }
     .pmc-item .t-label { font-size: 0.75rem; color: var(--muted); }
     .pmc-item .t-value { font-size: 1.05rem; font-weight: 700; }
-    .pmc-item .t-value.long { color: #93c5fd; }
-    .pmc-item .t-value.short { color: #d8b4fe; }
+    .pmc-item .t-value.long { color: #86efac; }
+    .pmc-item .t-value.short { color: #fca5a5; }
     .pmc-item .t-sub { font-size: 0.68rem; color: var(--muted); font-weight: 400; }
     .pmc-config { display: flex; gap: 10px; align-items: center; }
     .pmc-config label { font-size: 0.75rem; color: var(--muted); }
@@ -106,7 +105,7 @@
       display: flex;
       flex-wrap: wrap;
       gap: 12px 28px;
-      align-items: center;
+      align-items: stretch;
       justify-content: space-between;
     }
     .target-item { min-width: 110px; }
@@ -114,6 +113,27 @@
     .target-item .t-value { font-size: 1.05rem; font-weight: 700; }
     .t-value.pos { color: var(--green); }
     .t-value.neg { color: var(--red); }
+    .t-sub { font-size: 0.72rem; color: var(--muted); margin-top: 2px; font-weight: 400; }
+    /* Hero: P/L totale mensile da realizzare */
+    .target-hero {
+      background: var(--bg);
+      border: 2px solid var(--green);
+      border-radius: 12px;
+      padding: 12px 18px;
+      min-width: 200px;
+    }
+    .target-hero .t-label {
+      font-size: 0.8rem;
+      color: #86efac;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+    .target-hero .hero-value {
+      font-size: 1.7rem;
+      font-weight: 800;
+      color: var(--green);
+      margin: 2px 0 4px;
+    }
     .target-pct {
       display: flex;
       align-items: center;
@@ -121,7 +141,7 @@
     }
     .target-pct input {
       width: 64px;
-      background: var(--bg);
+      background: var(--card);
       border: 1px solid var(--border);
       color: var(--text);
       padding: 5px 8px;
@@ -164,7 +184,7 @@
     .target-status .ko { color: var(--red); font-weight: 700; }
     .stats {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 12px;
       margin-bottom: 20px;
     }
@@ -178,6 +198,90 @@
     .stat-card .value { font-size: 1.3rem; font-weight: 700; }
     .stat-card .value.positive { color: var(--green); }
     .stat-card .value.negative { color: var(--red); }
+    .stat-card .sub { font-size: 0.72rem; color: var(--muted); margin-top: 3px; line-height: 1.35; }
+    /* Wilson win-rate card */
+    #winRate { display: flex; align-items: baseline; gap: 10px; }
+    #winRateSub { line-height: 1.5; margin-top: 6px; }
+    #winRateSub .ws-row { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+    #winRateSub .ws-label { color: var(--muted); }
+    #winRateSub .ws-value { color: var(--text); font-weight: 600; }
+    #winRateSub .ws-main { display: none; }
+    /* Tooltip "i" */
+    .ws-info {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      border: 1px solid var(--muted);
+      color: var(--muted);
+      font-size: 0.65rem;
+      font-weight: 700;
+      font-style: normal;
+      cursor: help;
+      margin-left: 6px;
+      vertical-align: middle;
+      flex-shrink: 0;
+    }
+    .ws-info:hover { border-color: var(--accent); color: var(--accent); }
+    .ws-info .ws-tooltip {
+      display: none;
+      position: absolute;
+      bottom: calc(100% + 10px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: 300px;
+      max-width: 75vw;
+      background: #020617;
+      border: 1px solid var(--accent);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 0.78rem;
+      font-weight: 400;
+      line-height: 1.5;
+      color: #cbd5e1;
+      text-align: left;
+      z-index: 50;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+      cursor: default;
+    }
+    .ws-info .ws-tooltip em { color: var(--text); font-style: normal; font-weight: 600; }
+    .ws-info:hover .ws-tooltip,
+    .ws-info:focus .ws-tooltip { display: block; }
+    .ws-info .ws-tooltip::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 7px solid transparent;
+      border-top-color: var(--accent);
+    }
+    .wilson-bar {
+      position: relative;
+      height: 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      margin-top: 8px;
+    }
+    .wilson-range {
+      position: absolute;
+      top: 2px;
+      bottom: 2px;
+      background: rgba(59,130,246,0.35);
+      border-radius: 5px;
+    }
+    .wilson-point {
+      position: absolute;
+      top: -3px;
+      width: 3px;
+      bottom: -3px;
+      background: var(--accent);
+      border-radius: 2px;
+    }
     .nav {
       display: flex;
       align-items: center;
@@ -237,8 +341,8 @@
       font-weight: 700;
       margin-top: auto;
     }
-    .day .pnl.pos { color: var(--green); }
-    .day .pnl.neg { color: var(--red); }
+    .day .pnl.long { color: var(--green); }
+    .day .pnl.short { color: var(--red); }
     .day .details {
       font-size: 0.62rem;
       color: #64748b;
@@ -248,11 +352,11 @@
     .day .ap-badge {
       font-size: 0.6rem;
       font-weight: 700;
-      color: #93c5fd;
-      background: rgba(59,130,246,0.18);
       padding: 1px 5px;
       border-radius: 5px;
     }
+    .day .ap-badge.long { color: #86efac; background: rgba(34,197,94,0.18); }
+    .day .ap-badge.short { color: #fca5a5; background: rgba(239,68,68,0.18); }
     .day.has-events { background: #1a2332; }
     /* Modal */
     .modal-overlay {
@@ -324,7 +428,6 @@
       padding-right: 2px;
     }
     .pos-check-header .h-info { flex: 1; }
-    .pos-check-header .h-strike { width: 90px; text-align: center; }
     .pos-check-header .h-ctr { width: 76px; text-align: center; }
     .pos-check {
       display: flex;
@@ -339,18 +442,6 @@
     }
     .pos-check.selected { border-color: var(--green); background: rgba(34,197,94,0.08); }
     .pos-check input[type="checkbox"] { accent-color: var(--green); width: 16px; height: 16px; flex-shrink: 0; }
-    .pos-check .strike-input {
-      width: 90px;
-      padding: 5px 8px;
-      border-radius: 5px;
-      border: 1px solid var(--border);
-      background: var(--card);
-      color: var(--text);
-      font-size: 0.85rem;
-      text-align: center;
-      flex-shrink: 0;
-    }
-    .pos-check .strike-input:disabled { opacity: 0.4; }
     .pos-check .ctr-input {
       width: 76px;
       padding: 5px 8px;
@@ -362,6 +453,7 @@
       text-align: center;
       flex-shrink: 0;
     }
+    .pos-check .ctr-input:disabled { opacity: 0.4; }
     .form-group { margin-bottom: 12px; }
     .form-group label {
       display: block;
@@ -403,8 +495,8 @@
     }
     .op-item .info { flex: 1; min-width: 0; }
     .op-item .amount { font-weight: 700; font-size: 1.05rem; }
-    .op-item .amount.pos { color: var(--green); }
-    .op-item .amount.neg { color: var(--red); }
+    .op-item .amount.long { color: var(--green); }
+    .op-item .amount.short { color: var(--red); }
     .op-item .amount.neutral { color: var(--text); }
     .op-item .meta {
       font-size: 0.78rem;
@@ -422,8 +514,8 @@
       font-weight: 700;
       letter-spacing: 0.3px;
     }
-    .badge.long { background: rgba(59,130,246,0.25); color: #93c5fd; }
-    .badge.short { background: rgba(168,85,247,0.25); color: #d8b4fe; }
+    .badge.long { background: rgba(34,197,94,0.22); color: #86efac; }
+    .badge.short { background: rgba(239,68,68,0.22); color: #fca5a5; }
     .badge.ap { background: rgba(59,130,246,0.18); color: #93c5fd; }
     .badge.ch { background: rgba(34,197,94,0.18); color: #86efac; }
     .op-item .roi {
@@ -490,6 +582,7 @@
       .day .pnl { font-size: 0.7rem; }
       h1 { font-size: 1.15rem; }
       .form-row { grid-template-columns: 1fr; }
+      .target-hero .hero-value { font-size: 1.4rem; }
     }
   </style>
 </head>
@@ -528,13 +621,12 @@
 
     <div class="target-panel">
       <div class="target-row">
-        <div class="target-item target-pct">
-          <div>
-            <div class="t-label">Target mensile</div>
-            <div class="target-pct">
-              <input type="number" id="targetPct" value="4" step="0.5" min="0" />
-              <span>% sul capitale = <strong id="targetEuro">€ 0,00</strong></span>
-            </div>
+        <div class="target-item target-hero">
+          <div class="t-label">🎯 P/L mensile da realizzare</div>
+          <div class="hero-value" id="targetHero">€ 0,00</div>
+          <div class="target-pct">
+            <input type="number" id="targetPct" value="4" step="0.5" min="0" />
+            <span>% sul capitale</span>
           </div>
         </div>
         <div class="target-item">
@@ -544,14 +636,17 @@
         <div class="target-item">
           <div class="t-label">Atteso a oggi (giorno <span id="giornoCorrente">1</span>)</div>
           <div class="t-value" id="attesoOggi">€ 0,00</div>
+          <div class="t-sub" id="attesoPct"></div>
         </div>
         <div class="target-item">
           <div class="t-label">Realizzato questo mese</div>
           <div class="t-value" id="realizzatoMese">€ 0,00</div>
+          <div class="t-sub" id="realizzatoPct"></div>
         </div>
         <div class="target-item">
           <div class="t-label">Differenza vs ritmo</div>
           <div class="t-value" id="deltaRitmo">€ 0,00</div>
+          <div class="t-sub" id="deltaPct"></div>
         </div>
       </div>
       <div class="progress-bar">
@@ -562,10 +657,6 @@
     </div>
 
     <div class="stats">
-      <div class="stat-card">
-        <div class="label">Profitto mese (chiusure)</div>
-        <div class="value" id="profittoMese">€ 0,00</div>
-      </div>
       <div class="stat-card">
         <div class="label">Rendimento su capitale</div>
         <div class="value" id="rendimento">0,00%</div>
@@ -578,6 +669,11 @@
         <div class="label">Posizioni aperte</div>
         <div class="value" id="posAperte">0</div>
       </div>
+      <div class="stat-card">
+        <div class="label">Stima abilità reale (intervallo di Wilson, 95%)<i class="ws-info" tabindex="0">i<span class="ws-tooltip">Come leggere questi numeri: la tua abilità reale di chiudere in profitto quasi certamente (fiducia 95%) è <em>dentro</em> l'intervallo mostrato — è l'intervallo come insieme a godere di questa garanzia, non i singoli estremi presi da soli. Il valore più utile è il <em>limite inferiore</em>: anche nello scenario più sfavorevole compatibile con i tuoi dati, quella percentuale di chiusure finirebbe in profitto. Il win rate osservato è solo la fotografia del campione: con poche chiusure è quasi sempre ottimista. Più chiusure registri, più l'intervallo si stringe e la stima diventa affidabile.</span></i></div>
+        <div class="value" id="winRate">—</div>
+        <div class="sub" id="winRateSub">nessuna chiusura nel mese</div>
+      </div>
     </div>
 
     <div class="nav">
@@ -587,14 +683,14 @@
     </div>
 
     <div class="legend">
-      <span><span class="dot" style="background:rgba(59,130,246,0.5)"></span>Apertura posizione</span>
-      <span><span class="dot" style="background:#22c55e"></span>Chiusura in profitto</span>
-      <span><span class="dot" style="background:#ef4444"></span>Chiusura in perdita</span>
+      <span><span class="dot" style="background:#22c55e"></span>LONG</span>
+      <span><span class="dot" style="background:#ef4444"></span>SHORT</span>
+      <span><span class="dot" style="background:rgba(148,163,184,0.6)"></span>Nessuna operazione</span>
     </div>
 
     <div class="calendar" id="calendar"></div>
 
-    <p class="hint">Clicca su un giorno per aggiungere aperture o chiusure. Le posizioni si aprono in un giorno e si chiudono (anche a tranche) in giorni successivi. Il <strong>prezzo medio di carico</strong> (LONG e SHORT) è mostrato in alto, pesato sui contratti residui. Inserendo lo strike di uscita, il P/L è calcolato in automatico: punti × contratti × moltiplicatore − fee per contratto (modificabile a mano). I dati sono salvati su Supabase e sincronizzati tra i dispositivi.</p>
+    <p class="hint">Clicca su un giorno per aggiungere aperture o chiusure. Le posizioni si aprono in un giorno e si chiudono (anche a tranche) in giorni successivi. Il <strong>prezzo medio di carico</strong> (LONG e SHORT) è mostrato in alto, pesato sui contratti residui. Inserendo lo strike di uscita, il P/L è calcolato in automatico: punti × contratti × moltiplicatore − fee per contratto (modificabile a mano). Il win rate è stimato sulle chiusure del mese con l'intervallo di confidenza di Wilson al 95%. I dati sono salvati su Supabase e sincronizzati tra i dispositivi.</p>
 
     <footer>
       Dati salvati su Supabase • Sincronizzati tra dispositivi<br/>
@@ -841,6 +937,10 @@
       return n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
+    function fmtMedia(n) {
+      return n.toLocaleString('it-IT', { maximumFractionDigits: 2 });
+    }
+
     function uid() { return Date.now() + Math.floor(Math.random() * 1000); }
 
     function margineUnit(dir) { return dir === 'SHORT' ? MARGINE_SHORT : MARGINE_LONG; }
@@ -855,18 +955,21 @@
     }
 
     // ========== PREZZO MEDIO CARICO (PMC) ==========
-    // Media pesata sui contratti residui delle posizioni aperte di una direzione
+    // Media pesata sui contratti di APERTURA delle posizioni ancora aperte.
+    // Il prezzo medio di entrata è fissato all'apertura: le chiusure parziali
+    // NON lo modificano. Cambia solo quando una posizione si chiude del tutto
+    // (esce dal calcolo) o se ne apre una nuova.
     function pmcDir(dir) {
       const aperte = posAperteAll().filter(p => p.dir === dir);
       let sommaPrezzi = 0, sommaCtr = 0, senzaPrezzo = 0;
       aperte.forEach(p => {
-        const r = residual(p);
+        const qta = p.contratti; // contratti di apertura, non residui
         const prezzo = parseNum(p.strike);
         if (isNaN(prezzo)) {
-          senzaPrezzo += r;
+          senzaPrezzo += qta;
         } else {
-          sommaPrezzi += prezzo * r;
-          sommaCtr += r;
+          sommaPrezzi += prezzo * qta;
+          sommaCtr += qta;
         }
       });
       if (sommaCtr === 0) return null;
@@ -893,12 +996,7 @@
       });
     }
 
-    function fmtMedia(n) {
-      return n.toLocaleString('it-IT', { maximumFractionDigits: 2 });
-    }
-
     // ========== P/L AUTOMATICO ==========
-    // P/L = punti di differenza x n° contratti x moltiplicatore − fee x n° contratti
     function puntiUscita(dir, pmc, uscita) {
       return dir === 'LONG' ? (uscita - pmc) : (pmc - uscita);
     }
@@ -929,6 +1027,39 @@
     function calcRoi(pl, margine) {
       if (!margine || margine === 0) return 0;
       return (pl / margine) * 100;
+    }
+
+    // ========== INTERVALLO DI CONFIDENZA DI WILSON ==========
+    // z = 1.96 per il 95%
+    function wilsonInterval(wins, n, z) {
+      if (n === 0) return null;
+      const p = wins / n;
+      const z2 = z * z;
+      const denom = 1 + z2 / n;
+      const center = (p + z2 / (2 * n)) / denom;
+      const half = (z * Math.sqrt(p * (1 - p) / n + z2 / (4 * n * n))) / denom;
+      return {
+        p,
+        lo: Math.max(0, center - half),
+        hi: Math.min(1, center + half)
+      };
+    }
+
+    // CDF normale approssimata (Abramowitz–Stegun)
+    function normCdf(x) {
+      const t = 1 / (1 + 0.2316419 * Math.abs(x));
+      const d = 0.3989422804 * Math.exp(-x * x / 2);
+      const p = d * t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+      return x > 0 ? 1 - p : p;
+    }
+
+    // Probabilità che il vero win rate sia sopra una soglia (es. 50%)
+    function probWinRateSopra(wins, n, soglia) {
+      if (n === 0) return null;
+      const p = wins / n;
+      const se = Math.sqrt(p * (1 - p) / n);
+      if (se === 0) return p > soglia ? 1 : (p < soglia ? 0 : 0.5);
+      return normCdf((p - soglia) / se);
     }
 
     // ========== RENDER CALENDAR ==========
@@ -982,7 +1113,6 @@
 
       const aps = apertureDelGiorno(key);
       const chs = chiusureDelGiorno(key);
-      const plTot = plChiusureDelGiorno(key);
       const hasEvents = aps.length > 0 || chs.length > 0;
 
       const cell = document.createElement('div');
@@ -991,7 +1121,13 @@
 
       const num = document.createElement('div');
       num.className = 'num';
-      num.innerHTML = dt.getDate() + (aps.length ? ` <span class="ap-badge">+${aps.length} ap</span>` : '');
+      // badge aperture colorati per direzione: LONG verde, SHORT rosso
+      const apPerDir = {};
+      aps.forEach(p => { apPerDir[p.dir] = (apPerDir[p.dir] || 0) + 1; });
+      const apBadges = Object.entries(apPerDir).map(([dir, cnt]) =>
+        ` <span class="ap-badge ${dir.toLowerCase()}">${dir === 'LONG' ? '▲' : '▼'}${cnt}</span>`
+      ).join('');
+      num.innerHTML = dt.getDate() + apBadges;
       cell.appendChild(num);
 
       if (chs.length) {
@@ -1006,10 +1142,15 @@
         det.textContent = `${totCtr} ctr chiusi · ${fmt(totMarg)}€ marg.`;
         cell.appendChild(det);
 
-        const pnl = document.createElement('div');
-        pnl.className = 'pnl ' + (plTot >= 0 ? 'pos' : 'neg');
-        pnl.textContent = (plTot >= 0 ? '+' : '') + fmt(plTot) + ' €';
-        cell.appendChild(pnl);
+        // P/L per direzione: LONG verde, SHORT rosso (a prescindere da apertura/chiusura)
+        const plPerDir = {};
+        chs.forEach(x => { plPerDir[x.pos.dir] = (plPerDir[x.pos.dir] || 0) + x.c.pl; });
+        Object.entries(plPerDir).forEach(([dir, pl]) => {
+          const pnl = document.createElement('div');
+          pnl.className = 'pnl ' + dir.toLowerCase();
+          pnl.textContent = `${dir === 'LONG' ? '▲' : '▼'} ${pl >= 0 ? '+' : ''}${fmt(pl)} €`;
+          cell.appendChild(pnl);
+        });
       }
 
       if (aps.length && !chs.length) {
@@ -1026,23 +1167,20 @@
 
     function updateStats(year, month) {
       const prefix = `${year}-${String(month + 1).padStart(2, '0')}`;
-      let profitto = 0, numChiusure = 0;
-
+      let numChiusure = 0, wins = 0, losses = 0, be = 0;
       data.forEach(p => p.chiusure.forEach(c => {
         if (c.key.startsWith(prefix)) {
-          profitto += c.pl || 0;
           numChiusure++;
+          if (c.pl > 0) wins++;
+          else if (c.pl < 0) losses++;
+          else be++;
         }
       }));
 
       const aperte = posAperteAll().length;
-
+      const profitto = plMese(year, month);
       const capitale = parseFloat(document.getElementById('capitale').value) || 5000;
       const perc = capitale > 0 ? (profitto / capitale) * 100 : 0;
-
-      const elP = document.getElementById('profittoMese');
-      elP.textContent = (profitto >= 0 ? '+' : '') + '€ ' + fmt(profitto);
-      elP.className = 'value ' + (profitto > 0 ? 'positive' : profitto < 0 ? 'negative' : '');
 
       const elR = document.getElementById('rendimento');
       elR.textContent = (perc >= 0 ? '+' : '') + fmt(perc) + '%';
@@ -1050,6 +1188,27 @@
 
       document.getElementById('numOps').textContent = numChiusure;
       document.getElementById('posAperte').textContent = aperte;
+
+      // Win rate con intervallo di confidenza di Wilson (95%)
+      const elW = document.getElementById('winRate');
+      const elWS = document.getElementById('winRateSub');
+      const n = wins + losses;
+      if (n === 0) {
+        elW.textContent = '—';
+        elW.className = 'value';
+        elWS.textContent = be ? `${be} chiusur${be === 1 ? 'a' : 'e'} break-even, nessuna vincente/perdente` : 'nessuna chiusura nel mese';
+      } else {
+        const z = 1.96;
+        const w = wilsonInterval(wins, n, z);
+        // L'intervallo è il dato principale: è la stima prudente dell'abilità reale
+        elW.innerHTML = `${fmtMedia(w.lo * 100)}% <span style="color:var(--muted);font-size:1.1rem">–</span> ${fmtMedia(w.hi * 100)}%`;
+        elW.className = 'value ' + (w.p >= 0.5 ? 'positive' : 'negative');
+        const prob50 = probWinRateSopra(wins, n, 0.5);
+        elWS.innerHTML =
+          `<div class="ws-row"><span class="ws-label">Nel mese:</span> <span class="ws-value">${wins} vittorie</span> <span class="ws-label">/</span> <span class="ws-value">${losses} perdite</span>${be ? ` <span class="ws-label">/ ${be} break-even</span>` : ''} <span class="ws-label">· win rate osservato</span> <span class="ws-value">${fmtMedia(w.p * 100)}%</span></div>` +
+          `<div class="wilson-bar" title="Fascia blu = dove sta quasi certamente la tua abilità reale, linea = win rate osservato"><div class="wilson-range" style="left:${(w.lo * 100).toFixed(2)}%;width:${((w.hi - w.lo) * 100).toFixed(2)}%"></div><div class="wilson-point" style="left:${(w.p * 100).toFixed(2)}%"></div></div>` +
+          `<div class="ws-row" style="margin-top:6px"><span class="ws-label">Probabilità che l'abilità reale sia &gt; 50%:</span> <span class="ws-value">${fmtMedia(prob50 * 100)}%</span></div>`;
+      }
     }
 
     // ========== TARGET PANNEL ==========
@@ -1081,18 +1240,30 @@
       const realizzato = plMese(y, m);
       const delta = realizzato - atteso;
 
-      document.getElementById('targetEuro').textContent = '€ ' + fmt(target);
+      // P/L totale mensile da realizzare (in evidenza)
+      document.getElementById('targetHero').textContent = '€ ' + fmt(target);
+
+      // Percentuali rispetto al target
+      const pctTarget = target !== 0 ? (realizzato / target) * 100 : null;
+      const pctAtteso = target !== 0 ? (atteso / target) * 100 : null;
+      const pctDelta = target !== 0 ? (delta / target) * 100 : null;
+
       document.getElementById('quotaGiornaliera').textContent = '€ ' + fmt(quota);
       document.getElementById('giornoCorrente').textContent = isMeseCorrente ? giorno : (isMeseFuturo ? 'futuro' : 'chiuso');
       document.getElementById('attesoOggi').textContent = '€ ' + fmt(atteso);
+      document.getElementById('attesoPct').textContent = pctAtteso == null ? '' : `${fmt(pctAtteso)}% del target`;
 
       const elR = document.getElementById('realizzatoMese');
       elR.textContent = (realizzato >= 0 ? '+' : '') + '€ ' + fmt(realizzato);
       elR.className = 't-value ' + (realizzato > 0 ? 'pos' : realizzato < 0 ? 'neg' : '');
+      document.getElementById('realizzatoPct').textContent =
+        pctTarget == null ? '' : `${pctTarget >= 0 ? '+' : '−'}${fmt(Math.abs(pctTarget))}% del target (${pctTarget >= 0 ? 'raggiunto' : 'in deficit'})`;
 
       const elD = document.getElementById('deltaRitmo');
-      elD.textContent = (delta >= 0 ? '+' : '') + '€ ' + fmt(delta);
+      elD.textContent = (delta >= 0 ? '+' : '−') + '€ ' + fmt(Math.abs(delta));
       elD.className = 't-value ' + (delta >= 0 ? 'pos' : 'neg');
+      document.getElementById('deltaPct').textContent =
+        pctDelta == null ? '' : `${pctDelta >= 0 ? '+' : '−'}${fmt(Math.abs(pctDelta))}% vs target`;
 
       const fill = Math.min(100, target > 0 ? (realizzato / target) * 100 : 0);
       const fillEl = document.getElementById('targetProgress');
@@ -1381,7 +1552,7 @@
           return `
             <div class="op-item">
               <div class="info">
-                <div class="amount neutral">▲ Apertura <span class="badge ${p.dir.toLowerCase()}">${p.dir}</span></div>
+                <div class="amount ${p.dir.toLowerCase()}">▲ Apertura <span class="badge ${p.dir.toLowerCase()}">${p.dir}</span></div>
                 <div class="meta">
                   <span>${p.contratti} contr.</span>
                   ${p.strike ? `<span>Strike: ${escapeHtml(p.strike)}</span>` : ''}
@@ -1403,9 +1574,9 @@
           return `
             <div class="op-item">
               <div class="info">
-                <div class="amount ${x.c.pl >= 0 ? 'pos' : 'neg'}">${x.c.pl >= 0 ? '+' : ''}${fmt(x.c.pl)} €</div>
+                <div class="amount ${x.pos.dir.toLowerCase()}">${x.c.pl >= 0 ? '+' : ''}${fmt(x.c.pl)} € <span class="badge ${x.pos.dir.toLowerCase()}">#${x.pos.id} ${x.pos.dir}</span></div>
                 <div class="meta">
-                  <span>▼ Chiusura <span class="badge ${x.pos.dir.toLowerCase()}">#${x.pos.id} ${x.pos.dir}</span></span>
+                  <span>▼ Chiusura</span>
                   <span>${x.c.contratti} contr. (su ${x.pos.contratti})</span>
                   <span>Margine: ${fmt(marg)} €</span>
                   ${(x.c.strike || x.pos.strike) ? `<span>Strike ch.: ${escapeHtml(x.c.strike || x.pos.strike)}</span>` : ''}
@@ -1429,7 +1600,7 @@
       const contratti = Math.max(1, parseInt(document.getElementById('apContratti').value) || 1);
       const el = document.getElementById('previewApertura');
       const marg = margineUnit(dir) * contratti;
-      el.innerHTML = `Margine impegnato: <strong>${fmt(marg)} €</strong> · Nessun P/L all'apertura`;
+      el.innerHTML = `${dir} · margine impegnato: <strong>${fmt(marg)} €</strong> · Nessun P/L all'apertura`;
       el.classList.add('visible');
     }
 
