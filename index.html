@@ -1008,11 +1008,38 @@
     }
 
     function autoPlPos(pos, contratti, uscita) {
-      const info = pmcDir(pos.dir);
+      const info = pmcRiferimento(pos, selectedDate);
       if (!info) return NaN;
       const punti = puntiUscita(pos.dir, info.media, uscita);
       const pl = punti * contratti * MOLTIPLICATORE - FEE_CONTRATTO * contratti;
       return Math.round(pl * 100) / 100;
+    }
+
+    // ========== PMC DI RIFERIMENTO PER LE CHIUSURE ==========
+    // Media d'entrata della direzione "congelata" al giorno della PRIMA chiusura
+    // della posizione (o al giorno dell'operazione se non ha ancora chiusure):
+    // media pesata sui contratti di apertura delle posizioni della stessa
+    // direzione aperte entro quel giorno e non ancora chiuse del tutto.
+    // Chiusure successive e nuove aperture NON la modificano.
+    function pmcRiferimento(pos, fallbackKey) {
+      const keys = pos.chiusure.map(c => c.key).sort();
+      const refKey = keys.length ? keys[0] : (fallbackKey || null);
+      if (!refKey) return pmcDir(pos.dir);
+      let sommaPrezzi = 0, sommaCtr = 0;
+      data.forEach(q => {
+        if (q.dir !== pos.dir) return;
+        if (q.openKey > refKey) return; // aperta dopo: esclusa
+        const chiusiPrima = q.chiusure
+          .filter(c => c.key < refKey)
+          .reduce((s, c) => s + c.contratti, 0);
+        if (q.contratti - chiusiPrima <= 0) return; // già chiusa del tutto prima
+        const prezzo = parseNum(q.strike);
+        if (isNaN(prezzo)) return;
+        sommaPrezzi += prezzo * q.contratti; // pesa sui contratti di apertura
+        sommaCtr += q.contratti;
+      });
+      if (sommaCtr === 0) return pmcDir(pos.dir);
+      return { media: sommaPrezzi / sommaCtr, contratti: sommaCtr, posizioni: 1, senzaPrezzo: 0, residuoCtr: 0 };
     }
 
     // eventi di un giorno
@@ -1463,7 +1490,7 @@
           const roi = calcRoi(tot, totMarg);
           document.getElementById('chImportoMulti').value = Math.round(tot * 100) / 100;
           const dettaglio = conPl.map(x => {
-            const info = pmcDir(x.pos.dir);
+            const info = pmcRiferimento(x.pos, selectedDate);
             const punti = puntiUscita(x.pos.dir, info.media, uscita);
             return `#${x.pos.id}: ${punti >= 0 ? '+' : ''}${fmtMedia(punti)} pt × ${x.contratti} × ${MOLTIPLICATORE} − fee → <strong>${x.pl >= 0 ? '+' : ''}${fmt(x.pl)}</strong>`;
           }).join('<br/>');
@@ -1622,9 +1649,9 @@
       let contratti = parseInt(document.getElementById('chContratti').value) || 1;
       contratti = Math.min(Math.max(1, contratti), residuo);
       const uscita = parseNum(document.getElementById('chStrike').value);
-      const info = pmcDir(pos.dir);
+      const info = pmcRiferimento(pos, selectedDate);
 
-      // --- P/L automatico: punti dal PMC x contratti x moltiplicatore − fee ---
+      // --- P/L automatico: punti dal PMC di riferimento x contratti x moltiplicatore − fee ---
       if (singolaAuto && !isNaN(uscita) && info) {
         const punti = puntiUscita(pos.dir, info.media, uscita);
         const lordo = punti * contratti * MOLTIPLICATORE;
@@ -1633,7 +1660,8 @@
         document.getElementById('chImporto').value = auto;
         const marg = margineUnit(pos.dir) * contratti;
         const roi = calcRoi(auto, marg);
-        el.innerHTML = `PMC ${pos.dir}: <strong>${fmtMedia(info.media)}</strong> · uscita <strong>${fmtMedia(uscita)}</strong> · ${punti >= 0 ? '+' : ''}${fmtMedia(punti)} punti<br/>` +
+        const primaChiusura = pos.chiusure.length === 0;
+        el.innerHTML = `PMC ${pos.dir}${primaChiusura ? '' : ' (congelato all\'inizio delle chiusure)'}: <strong>${fmtMedia(info.media)}</strong> · uscita <strong>${fmtMedia(uscita)}</strong> · ${punti >= 0 ? '+' : ''}${fmtMedia(punti)} punti<br/>` +
           `${fmtMedia(punti)} × ${contratti} contr. × ${MOLTIPLICATORE} = <strong>${lordo >= 0 ? '+' : ''}${fmt(lordo)}</strong> − fee ${fmt(fee)} = ` +
           `<strong style="color:${auto>=0?'#22c55e':'#ef4444'}">${auto>=0?'+':''}${fmt(auto)}</strong> · ROI ${roi>=0?'+':''}${fmt(roi)}%`;
         el.classList.add('visible');
