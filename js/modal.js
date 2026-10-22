@@ -5,12 +5,11 @@ import { COMMISSIONE_BASE, COMMISSIONE_STEP, MOLTIPLICATORE } from './config.js'
 import { saveData, deletePosizioneRemota } from './storage.js';
 import {
   residual, posAperteAll, apertureDelGiorno, chiusureDelGiorno,
-  pmcRiferimento, puntiUscita, autoPlPos, autoPlMulti, calcRoi
+  pmcRiferimento, puntiUscita, autoPlPos, calcRoi
 } from './calc.js';
 import { renderPmcHeader, render } from './calendar.js';
-import { updateStats, updateTarget } from './dashboard.js';
 
-// Nota: autoPlMulti è definita qui sotto (dipende dal fee del form); calc.js non la importa.
+// Nota: autoPlMulti è definita in fondo a questo file (dipende dal fee del form).
 
 // ========== COMMISSIONI ==========
 export function populateCommissioni() {
@@ -219,7 +218,6 @@ export function updatePreviewChiusura() {
     const marg = margineUnit(pos.dir) * contratti;
     const roi = calcRoi(auto, marg);
     const primaChiusura = pos.chiusure.length === 0;
-    // FIX: stringa con apostrofo — prima era ' (congelato all'inizio...)' → SyntaxError nell'originale
     el.innerHTML = `PMC ${pos.dir}${primaChiusura ? '' : " (congelato all'inizio delle chiusure)"}: <strong>${fmtMedia(info.media)}</strong> · uscita <strong>${fmtMedia(uscita)}</strong> · ${punti >= 0 ? '+' : ''}${fmtMedia(punti)} punti<br/>` +
       `${fmtMedia(punti)} × ${contratti} contr. × ${MOLTIPLICATORE}${fee ? ` − ${fmt(fee)} comm.` : ''} = <strong style="color:${auto>=0?'#22c55e':'#ef4444'}">${auto>=0?'+':''}${fmt(auto)}</strong> · ROI ${roi>=0?'+':''}${fmt(roi)}%`;
     el.classList.add('visible');
