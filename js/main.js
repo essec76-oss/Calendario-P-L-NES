@@ -3,6 +3,7 @@ import { state } from './state.js';
 import { initSupabase, loadData, saveData, importaDaLocalStorage, SAVED_EVENT } from './storage.js';
 import { render, renderPmcHeader } from './calendar.js';
 import { updateStats, updateTarget, setWsScope } from './dashboard.js';
+import { residual } from './calc.js';
 import {
   populateCommissioni, openModal, closeModal, setMode, setChMode,
   updatePreviewApertura, updatePreviewChiusura, updatePreviewMulti,
@@ -94,15 +95,13 @@ window.deletePosizione = deletePosizione;
 window.deleteChiusura = deleteChiusura;
 window.openModal = openModal; // usato dalle celle del calendario
 
-// ---------- RE-RENDER PMC DOPO OGNI SAVE (al posto della chiamata diretta in saveData) ----------
+// ---------- RE-RENDER PMC DOPO OGNI SAVE ----------
 document.addEventListener(SAVED_EVENT, renderPmcHeader);
 
 // ---------- APERTURA MODALE DAL CALENDARIO ----------
 document.addEventListener('app:day-click', (e) => openModal(e.detail));
 
 // ---------- INIT ----------
-import { residual } from './calc.js'; // hoisted: disponibile anche se dichiarato in fondo (ES modules)
-
 populateCommissioni();
 render();
 initSupabase().then(() => loadData().then(d => {
