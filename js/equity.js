@@ -6,6 +6,10 @@ import { getCapitale, getTargetPct, fmt } from './utils.js';
 const VALUTA = '$';
 const MS_GIORNO = 86400000;
 let chart = null;
+let scope = 'totale';                 // 'totale' | 'mese'
+let mostraReale = true;
+let mostraStandard = true;
+let meseVisualizzato = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
 const $ = id => document.getElementById(id);
 
