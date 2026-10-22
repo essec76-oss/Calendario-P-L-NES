@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Equity - Calendario Profitti</title>
+  <link rel="icon" href="data:," />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    .page-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .page-nav a { color: #93c5fd; text-decoration: none; font-size: 0.9rem; }
+    .equity-panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .equity-summary { display: flex; flex-wrap: wrap; gap: 16px 32px; margin-bottom: 16px; }
+    .equity-summary .t-label { font-size: 0.75rem; color: var(--muted); }
+    .equity-summary .t-value { font-size: 1.2rem; font-weight: 700; }
+    .equity-summary .t-value.pos { color: var(--green); }
+    .equity-summary .t-value.neg { color: var(--red); }
+    .chart-wrap { position: relative; height: 380px; }
+    .toggles { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+    .toggles button {
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--muted);
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .toggles button.reale.active { border-color: var(--green); color: #86efac; background: rgba(34,197,94,0.15); }
+    .toggles button.standard.active { border-color: var(--accent); color: #93c5fd; background: rgba(59,130,246,0.2); }
+    .empty-msg { text-align: center; color: var(--muted); padding: 40px 0; }
+    .hint { font-size: 0.8rem; color: var(--muted); margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="page-nav">
+      <a href="index.html">← Calendario</a>
+      <h1>📈 Equity</h1>
+      <span></span>
+    </div>
+
+    <!-- Valori letti da loadData(): devono esistere con questi id -->
+    <input type="hidden" id="capitale" value="5000" />
+    <input type="hidden" id="targetPct" value="4" />
+
+    <div class="equity-panel">
+      <div class="equity-summary">
+        <div>
+          <div class="t-label">Equity reale oggi</div>
+          <div class="t-value" id="eqReale">—</div>
+        </div>
+        <div>
+          <div class="t-label">Ritmo standard oggi</div>
+          <div class="t-value" id="eqStandard">—</div>
+        </div>
+        <div>
+          <div class="t-label">Differenza</div>
+          <div class="t-value" id="eqDiff">—</div>
+        </div>
+      </div>
+
+      <div class="chart-wrap" id="chartBox">
+        <canvas id="equityChart"></canvas>
+      </div>
+
+      <div class="empty-msg" id="emptyMsg" style="display:none;">Nessun dato ancora: registra qualche apertura nel calendario.</div>
+
+      <div class="toggles">
+        <button class="reale active" id="btnReale">Equity reale</button>
+        <button class="standard active" id="btnStandard">Ritmo standard</button>
+      </div>
+      <div class="hint">
+        Equity reale: somma dei P/L chiusi, giorno per giorno. Ritmo standard: obiettivo mensile del target distribuito in modo uniforme sui giorni.
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/equity.js"></script>
+</body>
+</html>
