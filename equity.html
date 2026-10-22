@@ -38,6 +38,20 @@
     .toggles button.standard.active { border-color: var(--accent); color: #93c5fd; background: rgba(59,130,246,0.2); }
     .empty-msg { text-align: center; color: var(--muted); padding: 40px 0; }
     .hint { font-size: 0.8rem; color: var(--muted); margin-top: 10px; }
+        .scope-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .scope-row .toggles { margin-top: 0; }
+    .scope-row .toggles button.active { border-color: var(--accent); color: #93c5fd; background: rgba(59,130,246,0.2); }
+    .mese-nav { display: flex; align-items: center; gap: 10px; }
+    .mese-nav button {
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .mese-nav span { font-weight: 700; min-width: 150px; text-align: center; }
   </style>
 </head>
 <body>
