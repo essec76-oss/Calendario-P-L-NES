@@ -16,13 +16,21 @@ export function parseNum(v) {
   return isNaN(n) ? NaN : n;
 }
 
-export function uid() { return Date.now() + Math.floor(Math.random() * 1000); }
-
-export function escapeHtml(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+export function uid() {
+  return Date.now() + Math.floor(Math.random() * 1000);
 }
 
-export function margineUnit(dir) { return dir === 'SHORT' ? MARGINE_SHORT : MARGINE_LONG; }
+export function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+export function margineUnit(dir) {
+  return dir === 'SHORT' ? MARGINE_SHORT : MARGINE_LONG;
+}
 
 // ========== NUMERO SETTIMANA ISO ==========
 export function isoWeek(dt) {
@@ -36,5 +44,10 @@ export function isoWeek(dt) {
 }
 
 // Valori dei due input principali
-export function getCapitale() { return parseFloat(document.getElementById('capitale').value) || 5000; }
-export function getTargetPct() { return parseFloat(document.get
+export function getCapitale() {
+  return parseFloat(document.getElementById('capitale').value) || 5000;
+}
+
+export function getTargetPct() {
+  return parseFloat(document.getElementById('targetPct').value) || 0;
+}
