@@ -1,7 +1,7 @@
 // ========== STATISTICHE + PANNELLO TARGET ==========
 import { state } from './state.js';
 import { fmt, fmtMedia, getCapitale, getTargetPct } from './utils.js';
-import { posAperteAll, plMese, plChiusureDelGiorno, chiusureDelGiorno, wilsonInterval, probWinRateSopra } from './calc.js';
+import { posAperteAll, residual, plMese, plChiusureDelGiorno, chiusureDelGiorno, wilsonInterval, probWinRateSopra } from './calc.js';
 
 export function updateStats(year, month) {
   const prefix = `${year}-${String(month + 1).padStart(2, '0')}`;
@@ -18,7 +18,9 @@ export function updateStats(year, month) {
     }
   }));
 
-  const aperte = posAperteAll().length;
+  // Contratti aperti = somma dei contratti residui di ogni posizione ancora aperta
+  const contrattiAperti = posAperteAll().reduce((sum, p) => sum + residual(p), 0);
+
   const profitto = plMese(year, month);
   const capitale = getCapitale();
   const perc = capitale > 0 ? (profitto / capitale) * 100 : 0;
@@ -28,7 +30,7 @@ export function updateStats(year, month) {
   elR.className = 'value ' + (perc > 0 ? 'positive' : perc < 0 ? 'negative' : '');
 
   document.getElementById('numOps').textContent = numChiusure;
-  document.getElementById('posAperte').textContent = aperte;
+  document.getElementById('posAperte').textContent = contrattiAperti;
 
   // Win rate con intervallo di confidenza di Wilson (95%)
   const elW = document.getElementById('winRate');
