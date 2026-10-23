@@ -133,11 +133,11 @@ export function renderPmcHeader() {
     const elV = document.getElementById(idV);
     const elS = document.getElementById(idS);
     if (!info || info.media == null) {
-      elV.textContent = info && info.qta > 0 ? '—' : '—';
-      elS.textContent = info && info.qta > 0 ? `${info.posizioni} pos. senza prezzo` : 'nessuna posizione';
+      elV.textContent = '—';
+      elS.textContent = '';
     } else {
       elV.textContent = fmtMedia(info.media);
-      elS.textContent = `${info.posizioni} pos. · ${info.residuoCtr} contr. aperti` + (info.senzaPrezzo ? ` · ${info.senzaPrezzo} senza prezzo` : '');
+      elS.textContent = `${info.residuoCtr} contr. apert${info.residuoCtr === 1 ? 'o' : 'i'}` + (info.senzaPrezzo ? ` · ${info.senzaPrezzo} senza prezzo` : '');
     }
   });
 }
