@@ -137,7 +137,7 @@ export function renderPmcHeader() {
       elS.textContent = info && info.qta > 0 ? `${info.posizioni} pos. senza prezzo` : 'nessuna posizione';
     } else {
       elV.textContent = fmtMedia(info.media);
-      elS.textContent = `${info.posizioni} pos. · ${info.residuoCtr} contr. aperti` + (info.senzaPrezzo ? ` · ${info.senzaPrezzo} senza prezzo` : '');
+      elS.textContent = `${info.residuoCtr} contr. aperti · ${info.posizioni} pos.` + (info.senzaPrezzo ? ` · ${info.senzaPrezzo} senza prezzo` : '');
     }
   });
 }
