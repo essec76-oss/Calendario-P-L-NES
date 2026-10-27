@@ -97,6 +97,9 @@ export function updateTarget(y, m) {
   // Parziale: dal 1 fino a oggi (mese corrente) oppure intero mese (passato) oppure 0 (futuro)
   const realizzatoParziale = isMeseFuturo ? 0 : plFinoAGiorno(y, m, giorno);
 
+  // Media giornaliera realizzata = parziale / giorni trascorsi
+  const mediaGiornaliera = giorno > 0 ? realizzatoParziale / giorno : 0;
+
   // P/L totale mensile da realizzare (in evidenza)
   document.getElementById('targetHero').textContent = '€ ' + fmt(target);
 
@@ -128,6 +131,19 @@ export function updateTarget(y, m) {
     elParzSub.textContent = isMeseCorrente
       ? `dal 1 al ${giorno}`
       : (isMeseFuturo ? 'mese futuro' : 'intero mese');
+  }
+
+  // Media giornaliera realizzata
+  const elMedia = document.getElementById('mediaGiornaliera');
+  const elMediaSub = document.getElementById('mediaGiornalieraSub');
+  if (elMedia) {
+    elMedia.textContent = (mediaGiornaliera >= 0 ? '+' : '−') + '€ ' + fmt(Math.abs(mediaGiornaliera));
+    elMedia.className = 't-value ' + (mediaGiornaliera > 0 ? 'pos' : mediaGiornaliera < 0 ? 'neg' : '');
+  }
+  if (elMediaSub) {
+    elMediaSub.textContent = giorno > 0
+      ? `su ${giorno} giorn${giorno === 1 ? 'o' : 'i'}`
+      : (isMeseFuturo ? 'mese futuro' : '');
   }
 
   const elD = document.getElementById('deltaRitmo');
