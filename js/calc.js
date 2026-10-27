@@ -10,8 +10,17 @@ export function residual(p) {
   return p.contratti - chiusi;
 }
 
+// Posizioni ancora aperte, dalla più vecchia (in alto) alla più recente (in basso).
+// A parità di data vale l'ordine di inserimento.
 export function posAperteAll() {
-  return state.data.filter(p => residual(p) > 0);
+  return state.data
+    .map((p, i) => ({ p, i }))
+    .filter(x => residual(x.p) > 0)
+    .sort((a, b) => {
+      if (a.p.openKey !== b.p.openKey) return a.p.openKey < b.p.openKey ? -1 : 1;
+      return a.i - b.i;
+    })
+    .map(x => x.p);
 }
 
 // ========== EVENTI PER GIORNO ==========
@@ -41,45 +50,44 @@ export function plMese(y, m) {
 }
 
 // ========== PREZZO MEDIO CARICO (PMC) ==========
-// Semantica FIFO (first in, first out): il PMC per direzione è la media dei
-// lotti ancora aperti. Le aperture aggiungono lotti in coda (blending sul
-// quantitativo aperto); le chiusure tolgono i contratti dai lotti più
-// anziani, quindi dopo ogni chiusura la media si ricalcola sui lotti
-// rimasti. pmcWalk ripercorre cronologicamente aperture e chiusure fino
-// alla data voluta: le aperture dello stesso giorno contano, le chiusure no.
+// Ogni posizione è un lotto con un prezzo (lo strike di apertura).
+// Le chiusure riducono il lotto della posizione su cui sono state registrate.
+// Il PMC per direzione è la media pesata sul quantitativo dei lotti ancora in piedi:
+// con lotti da 1 contratto equivale a somma dei prezzi / n.
+// Default FIFO: in chiusura i lotti più vecchi sono preselezionati;
+// l'utente può scegliere altri lotti, e il PMC si ricalcola sui rimasti.
+// pmcWalk ripercorre cronologicamente aperture e chiusure fino alla data voluta:
+// le aperture dello stesso giorno contano, le chiusure dello stesso giorno no.
 export function pmcWalk(dir, finoA) {
   const ev = [];
   state.data.forEach(p => {
     if (p.dir !== dir) return;
     const prezzo = parseNum(p.strike);
-    ev.push({ key: p.openKey, ap: true, qta: p.contratti, prezzo, ok: !isNaN(prezzo) });
-    p.chiusure.forEach(c => ev.push({ key: c.key, ap: false, qta: c.contratti }));
+    ev.push({ key: p.openKey, ap: true, pos: p, qta: p.contratti, prezzo, ok: !isNaN(prezzo) });
+    p.chiusure.forEach(c => ev.push({ key: c.key, ap: false, pos: p, qta: c.contratti }));
   });
   ev.sort((a, b) => a.key === b.key ? (a.ap === b.ap ? 0 : (a.ap ? -1 : 1)) : (a.key < b.key ? -1 : 1));
-  // Coda FIFO dei lotti: le aperture aggiungono in fondo, le chiusure
-  // consumano i contratti dai lotti più anziani.
-  const lotti = [];
+
+  // Stato dei lotti: una voce per posizione, con quantitativo residuo.
+  const lotti = new Map();
   ev.forEach(e => {
     if (e.key > finoA) return;
     if (e.key === finoA && !e.ap) return;
     if (e.ap) {
-      lotti.push({ qta: e.qta, prezzo: e.prezzo, ok: e.ok });
+      lotti.set(e.pos.id, { qta: e.qta, prezzo: e.prezzo, ok: e.ok });
     } else {
-      let rim = e.qta;
-      while (rim > 0 && lotti.length) {
-        const lotto = lotti[0];
-        const take = Math.min(lotto.qta, rim);
-        lotto.qta -= take;
-        rim -= take;
-        if (lotto.qta === 0) lotti.shift();
-      }
+      const l = lotti.get(e.pos.id);
+      if (l) l.qta = Math.max(0, l.qta - e.qta);
     }
   });
+
   let qta = 0, qtaPr = 0, val = 0;
   lotti.forEach(l => {
+    if (l.qta <= 0) return;
     qta += l.qta;
     if (l.ok) { val += l.prezzo * l.qta; qtaPr += l.qta; }
   });
+
   const posAperteDir = state.data.filter(p => p.dir === dir && residual(p) > 0).length;
   let residuoCtr = 0;
   state.data.filter(p => p.dir === dir).forEach(p => { residuoCtr += Math.max(0, residual(p)); });
@@ -97,15 +105,12 @@ export function pmcDir(dir) {
 }
 
 // ========== PMC DI RIFERIMENTO PER LE CHIUSURE ==========
-// Con la logica FIFO il PMC non è più "congelato": ogni chiusura guarda alla
-// media valida all'inizio del giorno in cui avviene (le chiusure di quel
-// giorno non contano ancora nel walk). Il P/L è strike di uscita meno
-// questo PMC; dopo la chiusura i lotti più anziani escono dal calcolo e la
-// media si ricalcola sui lotti rimasti.
+// Il PMC usato per una chiusura è quello valido all'inizio del giorno in cui avviene
+// (le chiusure di quel giorno non contano ancora). Il P/L è strike di uscita meno questo PMC.
 export function pmcRiferimento(pos, fallbackKey) {
   const w = pmcWalk(pos.dir, fallbackKey || '9999-99-99');
   if (w.media == null) return null;
-  return { media: w.media, contratti: w.qtaPr, posizioni: 1, senzaPrezzo: w.senzaPrezzo, residuoCtr: w.residuoCtr };
+  return { media: w.media, contratti: w.qta, posizioni: 1, senzaPrezzo: w.senzaPrezzo, residuoCtr: w.residuoCtr };
 }
 
 // ========== P/L ==========
