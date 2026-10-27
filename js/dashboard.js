@@ -51,7 +51,7 @@ export function updateStats(year, month) {
     elWS.innerHTML =
       `<div class="ws-row"><span class="ws-label">${etichetta}</span> <span class="ws-value">${wins} vittorie</span> <span class="ws-label">/</span> <span class="ws-value">${losses} perdite</span>${be ? ` <span class="ws-label">/ ${be} break-even</span>` : ''} <span class="ws-label">· win rate osservato</span> <span class="ws-value">${fmtMedia(w.p * 100)}%</span></div>` +
       `<div class="wilson-bar" title="Fascia blu = dove sta quasi certamente la tua abilità reale, linea = win rate osservato"><div class="wilson-range" style="left:${(w.lo * 100).toFixed(2)}%;width:${((w.hi - w.lo) * 100).toFixed(2)}%"></div><div class="wilson-point" style="left:${(w.p * 100).toFixed(2)}%"></div></div>` +
-      `<div class="ws-row" style="margin-top:6px"><span class="ws-label">Probabilità che l'abilità reale sia &gt; 50%:</span> <span class="ws-value">${fmtMedia(prob50 * 100)}%</span></div>`;
+      `<div class="ws-row" style="margin-top:6px"><span class="ws-label">Probabilità che l'abilità reale sia > 50%:</span> <span class="ws-value">${fmtMedia(prob50 * 100)}%</span></div>`;
   }
 }
 
@@ -60,6 +60,18 @@ export function setWsScope(scope) {
   document.getElementById('wsMese').classList.toggle('active', scope === 'mese');
   document.getElementById('wsTotale').classList.toggle('active', scope === 'totale');
   updateStats(state.current.getFullYear(), state.current.getMonth());
+}
+
+/** Somma P/L chiusure del mese dal giorno 1 fino a finoAGiorno (incluso). */
+function plFinoAGiorno(y, m, finoAGiorno) {
+  const prefix = `${y}-${String(m + 1).padStart(2, '0')}`;
+  let tot = 0;
+  state.data.forEach(p => p.chiusure.forEach(c => {
+    if (!c.key.startsWith(prefix)) return;
+    const giorno = parseInt(c.key.slice(8, 10), 10);
+    if (giorno <= finoAGiorno) tot += c.pl || 0;
+  }));
+  return tot;
 }
 
 // ========== TARGET PANNEL ==========
@@ -82,6 +94,9 @@ export function updateTarget(y, m) {
   const realizzato = plMese(y, m);
   const delta = realizzato - atteso;
 
+  // Parziale: dal 1 fino a oggi (mese corrente) oppure intero mese (passato) oppure 0 (futuro)
+  const realizzatoParziale = isMeseFuturo ? 0 : plFinoAGiorno(y, m, giorno);
+
   // P/L totale mensile da realizzare (in evidenza)
   document.getElementById('targetHero').textContent = '€ ' + fmt(target);
 
@@ -101,6 +116,19 @@ export function updateTarget(y, m) {
   elH.className = 'hero-value ' + (realizzato > 0 ? 'pos' : realizzato < 0 ? 'neg' : '');
   document.getElementById('realizzatoPct').textContent =
     pctTarget == null ? '' : `${pctTarget >= 0 ? '+' : '−'}${fmt(Math.abs(pctTarget))}% del target (${pctTarget >= 0 ? 'raggiunto' : 'in deficit'})`;
+
+  // Realizzato fino a oggi (parziale)
+  const elParz = document.getElementById('realizzatoParziale');
+  const elParzSub = document.getElementById('realizzatoParzialeSub');
+  if (elParz) {
+    elParz.textContent = (realizzatoParziale >= 0 ? '+' : '−') + '€ ' + fmt(Math.abs(realizzatoParziale));
+    elParz.className = 't-value ' + (realizzatoParziale > 0 ? 'pos' : realizzatoParziale < 0 ? 'neg' : '');
+  }
+  if (elParzSub) {
+    elParzSub.textContent = isMeseCorrente
+      ? `dal 1 al ${giorno}`
+      : (isMeseFuturo ? 'mese futuro' : 'intero mese');
+  }
 
   const elD = document.getElementById('deltaRitmo');
   elD.textContent = (delta >= 0 ? '+' : '−') + '€ ' + fmt(Math.abs(delta));
