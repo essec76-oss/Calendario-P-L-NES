@@ -10,8 +10,17 @@ export function residual(p) {
   return p.contratti - chiusi;
 }
 
+// Posizioni ancora aperte, dalla più vecchia (in alto) alla più recente (in basso).
+// A parità di data vale l'ordine di inserimento.
 export function posAperteAll() {
-  return state.data.filter(p => residual(p) > 0);
+  return state.data
+    .map((p, i) => ({ p, i }))
+    .filter(x => residual(x.p) > 0)
+    .sort((a, b) => {
+      if (a.p.openKey !== b.p.openKey) return a.p.openKey < b.p.openKey ? -1 : 1;
+      return a.i - b.i;
+    })
+    .map(x => x.p);
 }
 
 // ========== EVENTI PER GIORNO ==========
@@ -41,41 +50,92 @@ export function plMese(y, m) {
 }
 
 // ========== PREZZO MEDIO CARICO (PMC) ==========
-// Semantica da conto reale: il PMC aggregato per direzione è una proprietà
-// della POSIZIONE AGGREGATA. Le chiusure NON lo modificano mai. Cambia
-// solo con le aperture (blending sul quantitativo aperto) e si azzera
-// quando la direzione torna piatta (tutti i contratti chiusi).
-// pmcWalk ripercorre cronologicamente aperture e chiusure fino alla data
-// voluta: le aperture dello stesso giorno contano, le chiusure no.
+// Regola del gruppo di contratti aperti per una direzione:
+// 1. Ogni apertura imposta il PMC alla media di tutti i contratti aperti in quel momento.
+//    Con 1 contratto vale il suo prezzo; aggiungendone un altro si mescola: (somma) / n.
+// 2. Alla prima giornata di chiusura che segue un'apertura, il PMC passa alla media dei
+//    contratti residui e resta fisso: le chiusure successive non lo ricalcolano.
+// 3. Quando il gruppo si azzera, il PMC non esiste più finché non viene aperta una nuova posizione.
+// Le chiusure di una giornata usano il PMC di inizio giornata (le aperture di quel giorno contano,
+// le chiusure dello stesso giorno no).
 export function pmcWalk(dir, finoA) {
-  const ev = [];
-  state.data.forEach(p => {
-    if (p.dir !== dir) return;
-    const prezzo = parseNum(p.strike);
-    ev.push({ key: p.openKey, ap: true, qta: p.contratti, prezzo, ok: !isNaN(prezzo) });
-    p.chiusure.forEach(c => ev.push({ key: c.key, ap: false, qta: c.contratti }));
+  const posDir = state.data.filter(p => p.dir === dir);
+
+  // Giornate con eventi, in ordine cronologico (le date ISO si ordinano come stringhe)
+  const giorni = new Set();
+  posDir.forEach(p => {
+    giorni.add(p.openKey);
+    p.chiusure.forEach(c => giorni.add(c.key));
   });
-  ev.sort((a, b) => a.key === b.key ? (a.ap === b.ap ? 0 : (a.ap ? -1 : 1)) : (a.key < b.key ? -1 : 1));
-  let qta = 0, qtaPr = 0, val = 0;
-  ev.forEach(e => {
-    if (e.key > finoA) return;
-    if (e.key === finoA && !e.ap) return;
-    if (e.ap) {
-      qta += e.qta;
-      if (e.ok) { val += e.prezzo * e.qta; qtaPr += e.qta; }
-    } else {
-      qta -= e.qta;
-      if (qta <= 0) { qta = 0; qtaPr = 0; val = 0; }
+  const ordine = [...giorni].sort();
+
+  // Stato dei lotti: una voce per posizione, con quantitativo residuo
+  const lotti = new Map();
+  const mediaAperti = () => {
+    let val = 0, qtaPr = 0;
+    lotti.forEach(l => {
+      if (l.qta <= 0 || !l.ok) return;
+      val += l.prezzo * l.qta;
+      qtaPr += l.qta;
+    });
+    return qtaPr > 0 ? val / qtaPr : null;
+  };
+
+  let ref = null;            // PMC di riferimento corrente
+  let ricalcolato = true;    // true = il PMC è già stato fissato sui residui dopo l'ultima apertura
+
+  for (const k of ordine) {
+    if (k > finoA) break;
+
+    // 1. Aperture della giornata: il PMC diventa la media di tutti i contratti aperti
+    let apertoOggi = false;
+    posDir.forEach(p => {
+      if (p.openKey !== k) return;
+      const prezzo = parseNum(p.strike);
+      lotti.set(p.id, { qta: p.contratti, prezzo, ok: !isNaN(prezzo) });
+      apertoOggi = true;
+    });
+    if (apertoOggi) {
+      ref = mediaAperti();
+      ricalcolato = false;
     }
+
+    // Giornata di riferimento: le chiusure non contano ancora
+    if (k === finoA) break;
+
+    // 2. Chiusure della giornata: usano il PMC di inizio giornata già impostato
+    let chiusoOggi = false;
+    posDir.forEach(p => p.chiusure.forEach(c => {
+      if (c.key !== k) return;
+      const l = lotti.get(p.id);
+      if (l) l.qta = Math.max(0, l.qta - c.contratti);
+      chiusoOggi = true;
+    }));
+
+    // 3. Fine giornata: solo la prima chiusura dopo un'apertura fissa il PMC sui residui
+    if (chiusoOggi && !ricalcolato) {
+      ref = mediaAperti();
+      ricalcolato = true;
+    }
+  }
+
+  let qta = 0, qtaPr = 0;
+  lotti.forEach(l => {
+    if (l.qta <= 0) return;
+    qta += l.qta;
+    if (l.ok) qtaPr += l.qta;
   });
-  const posAperteDir = state.data.filter(p => p.dir === dir && residual(p) > 0).length;
+
+  const posizioni = posDir.filter(p => residual(p) > 0).length;
   let residuoCtr = 0;
-  state.data.filter(p => p.dir === dir).forEach(p => { residuoCtr += Math.max(0, residual(p)); });
+  posDir.forEach(p => { residuoCtr += Math.max(0, residual(p)); });
+
   return {
-    media: qtaPr > 0 ? val / qtaPr : null,
+    media: ref,
     qta,
+    qtaPr,
     senzaPrezzo: Math.max(0, qta - qtaPr),
-    posizioni: posAperteDir,
+    posizioni,
     residuoCtr
   };
 }
@@ -85,17 +145,17 @@ export function pmcDir(dir) {
 }
 
 // ========== PMC DI RIFERIMENTO PER LE CHIUSURE ==========
-// Media d'entrata della direzione "congelata" al giorno della PRIMA chiusura
-// della posizione (o al giorno dell'operazione se non ha ancora chiusure):
-// è il valore del walk cronologico a quella data. Chiusure successive e
-// nuove aperture NON la modificano: ogni chiusura guarda alla media valida
-// quando è iniziata l'uscita da quella posizione.
+// PMC valido all'inizio della giornata della chiusura. Il P/L è strike di uscita meno questo PMC.
 export function pmcRiferimento(pos, fallbackKey) {
-  const keys = pos.chiusure.map(c => c.key).sort();
-  const refKey = keys.length ? keys[0] : (fallbackKey || '9999-99-99');
-  const w = pmcWalk(pos.dir, refKey);
+  const w = pmcWalk(pos.dir, fallbackKey || '9999-99-99');
   if (w.media == null) return null;
-  return { media: w.media, contratti: w.qtaPr, posizioni: 1, senzaPrezzo: w.senzaPrezzo, residuoCtr: w.residuoCtr };
+  return {
+    media: w.media,
+    contratti: w.qtaPr,
+    posizioni: 1,
+    senzaPrezzo: w.senzaPrezzo,
+    residuoCtr: w.residuoCtr
+  };
 }
 
 // ========== P/L ==========

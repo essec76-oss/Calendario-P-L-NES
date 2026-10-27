@@ -113,7 +113,7 @@
 
     <div class="calendar" id="calendar"></div>
 
-    <p class="hint">Clicca su un giorno per aggiungere aperture o chiusure. Le posizioni si aprono in un giorno e si chiudono (anche a tranche) in giorni successivi. Il <strong>prezzo medio di carico</strong> (LONG e SHORT) è mostrato in alto, pesato sui contratti residui. Inserendo lo strike di uscita, il P/L è calcolato in automatico: punti × contratti × moltiplicatore (le commissioni si inseriscono a mano). Il win rate è stimato sulle chiusure con l'intervallo di confidenza di Wilson al 95%. I dati sono salvati su Supabase e sincronizzati tra i dispositivi.</p>
+    <p class="hint">Clicca su un giorno per aggiungere aperture o chiusure. Le posizioni si aprono in un giorno e si chiudono (anche a tranche) in giorni successivi. Il <strong>prezzo medio di carico</strong> (LONG e SHORT) è mostrato in alto, pesato sui contratti residui. Inserendo lo strike di uscita, il P/L è calcolato in automatico: punti × contratti × moltiplicatore. Il P/L può essere modificato a mano. Il win rate è stimato sulle chiusure con l'intervallo di confidenza di Wilson al 95%. I dati sono salvati su Supabase e sincronizzati tra i dispositivi.</p>
 
     <footer>
       Dati salvati su Supabase • Sincronizzati tra dispositivi<br/>
@@ -187,15 +187,9 @@
               <input type="number" id="chContratti" min="1" step="1" value="1" />
             </div>
           </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="chImporto">P/L della chiusura (€, calcolato in automatico dal PMC)</label>
-              <input type="number" id="chImporto" step="0.01" placeholder="es. 125.50 oppure -80" />
-            </div>
-            <div class="form-group">
-              <label for="chCommissioni">Commissioni ap.+chius. (€)</label>
-              <select id="chCommissioni"></select>
-            </div>
+          <div class="form-group">
+            <label for="chImporto">P/L della chiusura (€, calcolato in automatico dal PMC)</label>
+            <input type="number" id="chImporto" step="0.01" placeholder="es. 125.50 oppure -80" />
           </div>
           <div class="preview-roi" id="previewChiusura"></div>
         </div>
@@ -214,12 +208,6 @@
             <div class="form-group">
               <label for="chImportoMulti">P/L della chiusura (€, calcolato in automatico dal PMC)</label>
               <input type="number" id="chImportoMulti" step="0.01" placeholder="es. 375 oppure -150" />
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="chCommissioniMulti">Commissioni ap.+chius. per posizione (€)</label>
-              <select id="chCommissioniMulti"></select>
             </div>
           </div>
           <div class="hint">Il P/L totale viene ripartito proporzionalmente ai contratti chiusi di ogni posizione.</div>
