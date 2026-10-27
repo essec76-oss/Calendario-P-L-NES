@@ -1,7 +1,7 @@
 // ========== MODALE: FORM, PREVIEW, AZIONI CRUD ==========
 import { state } from './state.js';
 import { fmt, fmtMedia, parseNum, uid, margineUnit, escapeHtml } from './utils.js';
-import { COMMISSIONE_BASE, COMMISSIONE_STEP, MOLTIPLICATORE } from './config.js';
+import { MOLTIPLICATORE } from './config.js';
 import { saveData, deletePosizioneRemota } from './storage.js';
 import {
   residual, posAperteAll, apertureDelGiorno, chiusureDelGiorno,
@@ -9,77 +9,46 @@ import {
 } from './calc.js';
 import { renderPmcHeader, render } from './calendar.js';
 
-// Nota: autoPlMulti è definita in fondo a questo file (dipende dal fee del form).
+// Nessuna commissione nel form di chiusura.
+// Funzione mantenuta vuota perché altri file potrebbero ancora chiamarla.
+export function populateCommissioni() {}
 
-// ========== COMMISSIONI ==========
-// Unità base: COMMISSIONE_BASE (0,605 €). Le opzioni sono multipli di questa unità.
-// Default: COMMISSIONE_STEP unità per contratto (es. 4 × 0,605 = 2,42 € a contratto).
-let ctrLastSingola = null;
-let ctrLastMulti = null;
-let legameFatto = false;
-
-// Valore di k unità, arrotondato al millesimo per non perdere i decimali di 0,605
-function valoreFee(k) {
-  return Math.round(COMMISSIONE_BASE * k * 1000) / 1000;
-}
-
-function etichettaFee(v) {
-  return v.toFixed(3).replace('.', ',') + ' €';
-}
-
-// Rigenera le opzioni in multipli di 0,605 € e seleziona il default per n contratti
-function buildCommissioni(id, n) {
-  const sel = document.getElementById(id);
-  const unitaDefault = n * COMMISSIONE_STEP;
-  const maxK = unitaDefault + COMMISSIONE_STEP;
-  sel.innerHTML = '';
-  const opt0 = document.createElement('option');
-  opt0.value = '0';
-  opt0.textContent = '— Nessuna —';
-  sel.appendChild(opt0);
-  for (let k = 1; k <= maxK; k++) {
-    const v = valoreFee(k);
-    const opt = document.createElement('option');
-    opt.value = String(v);
-    opt.textContent = `${etichettaFee(v)} (${k} × ${etichettaFee(COMMISSIONE_BASE)})`;
-    sel.appendChild(opt);
-  }
-  sel.value = n > 0 ? String(valoreFee(unitaDefault)) : '0';
-}
-
-function commissioneSelez(id) {
-  return parseFloat(document.getElementById(id).value) || 0;
-}
-
-export function populateCommissioni() {
-  buildCommissioni('chCommissioni', 0);
-  buildCommissioni('chCommissioniMulti', 0);
-  if (!legameFatto) {
-    bindAutoFlags();
-    legameFatto = true;
-  }
-}
-
-// ========== P/L AUTOMATICO / MANUALE ==========
-// Se l'utente digita il P/L, il calcolo automatico si ferma finché non cambia
-// strike, contratti o fee: a quel punto il P/L torna automatico.
-function bindAutoFlags() {
-  const on = (id, fn) => document.getElementById(id).addEventListener('input', fn);
-  on('chImporto', () => { state.singolaAuto = false; updatePreviewChiusura(); });
-  on('chStrike', () => { state.singolaAuto = true; updatePreviewChiusura(); });
-  on('chContratti', () => { state.singolaAuto = true; updatePreviewChiusura(); });
-  on('chImportoMulti', () => { state.multiAuto = false; updatePreviewMulti(); });
-  on('chStrikeMulti', () => { state.multiAuto = true; updatePreviewMulti(); });
-  document.getElementById('chCommissioni').addEventListener('change', () => {
-    state.singolaAuto = true; updatePreviewChiusura();
+// ========== ORDINAMENTO ==========
+// Posizioni aperte: la più vecchia in alto, la più recente in basso.
+// A parità di data vale l'ordine di inserimento.
+function ordinaPerData(lista) {
+  return lista.slice().sort((a, b) => {
+    if (a.openKey !== b.openKey) return a.openKey < b.openKey ? -1 : 1;
+    return state.data.indexOf(a) - state.data.indexOf(b);
   });
-  document.getElementById('chCommissioniMulti').addEventListener('change', () => {
-    state.multiAuto = true; updatePreviewMulti();
-  });
+}
+
+function posizioniChiudibili() {
+  return ordinaPerData(posAperteAll());
+}
+
+// ========== BINDING INPUT (una sola volta) ==========
+let bindFatto = false;
+
+function bindOnce() {
+  if (bindFatto) return;
+  bindFatto = true;
+  const on = (id, ev, fn) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener(ev, fn);
+  };
+  // Se l'utente digita il P/L, il calcolo automatico si ferma
+  // finché non cambia strike o contratti.
+  on('chImporto', 'input', () => { state.singolaAuto = false; updatePreviewChiusura(); });
+  on('chStrike', 'input', () => { state.singolaAuto = true; updatePreviewChiusura(); });
+  on('chContratti', 'input', () => { state.singolaAuto = true; updatePreviewChiusura(); });
+  on('chImportoMulti', 'input', () => { state.multiAuto = false; updatePreviewMulti(); });
+  on('chStrikeMulti', 'input', () => { state.multiAuto = true; updatePreviewMulti(); });
 }
 
 // ========== APERTURA/CHIUSURA MODALE ==========
 export function openModal(key) {
+  bindOnce();
   state.selectedDate = key;
   const [y, m, d] = key.split('-');
   const dateObj = new Date(y, m - 1, d);
@@ -128,19 +97,15 @@ function resetForms() {
   document.getElementById('previewApertura').classList.remove('visible');
   document.getElementById('previewChiusura').classList.remove('visible');
   document.getElementById('previewChiusuraMulti').classList.remove('visible');
-  document.getElementById('chCommissioni').value = '0';
-  document.getElementById('chCommissioniMulti').value = '0';
   state.singolaAuto = true;
   state.multiAuto = true;
-  ctrLastSingola = null;
-  ctrLastMulti = null;
   populatePosizioniChiusura();
 }
 
-// ========== ELENCO POSIZIONI CHIUDIBILI (lotti, più vecchio in alto) ==========
+// ========== ELENCO POSIZIONI CHIUDIBILI (più vecchia in alto) ==========
 function populatePosizioniChiusura() {
   const sel = document.getElementById('chPosizione');
-  const aperte = posAperteAll();
+  const aperte = posizioniChiudibili();
   sel.innerHTML = '';
   if (!aperte.length) {
     const opt = document.createElement('option');
@@ -168,7 +133,7 @@ function populatePosizioniChiusura() {
 
 function renderPosCheckList() {
   const box = document.getElementById('posCheckList');
-  const aperte = posAperteAll();
+  const aperte = posizioniChiudibili();
   if (!aperte.length) {
     box.innerHTML = '<div class="empty">— Nessuna posizione aperta —</div>';
     return;
@@ -196,7 +161,10 @@ function renderPosCheckList() {
       state.multiAuto = true;
       updatePreviewMulti();
     });
-    ctr.addEventListener('input', updatePreviewMulti);
+    ctr.addEventListener('input', () => {
+      state.multiAuto = true;
+      updatePreviewMulti();
+    });
     row.classList.add('selected');
     box.appendChild(row);
   });
@@ -222,11 +190,11 @@ function getStrikeMulti() {
 }
 
 // ========== P/L AUTOMATICO MULTIPLA ==========
-// P/L automatico per ogni lotto selezionato (PMC della direzione prima di questo giorno, meno le fee)
-function autoPlMulti(sel, uscita, fee) {
+// P/L per ogni posizione selezionata: punti dal PMC di riferimento × contratti × moltiplicatore
+function autoPlMulti(sel, uscita) {
   return sel.map(x => {
     let pl = autoPlPos(x.pos, x.contratti, uscita);
-    if (!isNaN(pl)) pl = Math.round((pl - fee) * 100) / 100;
+    if (!isNaN(pl)) pl = Math.round(pl * 100) / 100;
     return { ...x, pl };
   });
 }
@@ -252,23 +220,18 @@ export function updatePreviewChiusura() {
   const residuo = residual(pos);
   let contratti = parseInt(document.getElementById('chContratti').value) || 1;
   contratti = Math.min(Math.max(1, contratti), residuo);
-  if (contratti !== ctrLastSingola) {
-    ctrLastSingola = contratti;
-    buildCommissioni('chCommissioni', contratti);
-  }
   const uscita = parseNum(document.getElementById('chStrike').value);
   const info = pmcRiferimento(pos, state.selectedDate);
 
-  // --- P/L automatico: punti dal PMC di riferimento x contratti x moltiplicatore - fee ---
+  // --- P/L automatico: punti dal PMC di riferimento × contratti × moltiplicatore ---
   if (state.singolaAuto && !isNaN(uscita) && info) {
     const punti = puntiUscita(pos.dir, info.media, uscita);
-    const fee = commissioneSelez('chCommissioni');
-    const auto = Math.round((punti * contratti * MOLTIPLICATORE - fee) * 100) / 100;
+    const auto = Math.round(punti * contratti * MOLTIPLICATORE * 100) / 100;
     document.getElementById('chImporto').value = auto;
     const marg = margineUnit(pos.dir) * contratti;
     const roi = calcRoi(auto, marg);
     el.innerHTML = `PMC ${pos.dir} (attuale, prima di questa chiusura): <strong>${fmtMedia(info.media)}</strong> · uscita <strong>${fmtMedia(uscita)}</strong> · ${punti >= 0 ? '+' : ''}${fmtMedia(punti)} punti<br/>` +
-      `${fmtMedia(punti)} × ${contratti} contr. × ${MOLTIPLICATORE}${fee ? ` − ${fmt(fee)} fee` : ''} = <strong style="color:${auto>=0?'#22c55e':'#ef4444'}">${auto>=0?'+':''}${fmt(auto)}</strong> · ROI ${roi>=0?'+':''}${fmt(roi)}%`;
+      `${fmtMedia(punti)} × ${contratti} contr. × ${MOLTIPLICATORE} = <strong style="color:${auto>=0?'#22c55e':'#ef4444'}">${auto>=0?'+':''}${fmt(auto)}</strong> · ROI ${roi>=0?'+':''}${fmt(roi)}%`;
     el.classList.add('visible');
     return;
   }
@@ -282,7 +245,7 @@ export function updatePreviewChiusura() {
   const marg = margineUnit(pos.dir) * contratti;
   const roi = calcRoi(pl, marg);
   el.innerHTML = `Margine della tranche chiusa: <strong>${fmt(marg)} €</strong> · ROI: <strong style="color:${roi>=0?'#22c55e':'#ef4444'}">${roi>=0?'+':''}${fmt(roi)}%</strong>` +
-    (info ? `<br/><span style="font-size:0.75rem;color:var(--muted)">PMC ${pos.dir}: ${fmtMedia(info.media)} — P/L manuale (modifica strike, contratti o fee per tornare al calcolo automatico)</span>` : '');
+    (info ? `<br/><span style="font-size:0.75rem;color:var(--muted)">PMC ${pos.dir}: ${fmtMedia(info.media)} — P/L manuale (modifica strike o contratti per tornare al calcolo automatico)</span>` : '');
   el.classList.add('visible');
 }
 
@@ -295,17 +258,9 @@ export function updatePreviewMulti() {
   }
   const uscita = parseNum(getStrikeMulti());
 
-  // Default fee multipla: per n contratti della posizione con più contratti chiusi
-  const nFee = sel.length ? Math.max(...sel.map(x => x.contratti)) : 0;
-  if (nFee !== ctrLastMulti) {
-    ctrLastMulti = nFee;
-    buildCommissioni('chCommissioniMulti', nFee);
-  }
-
-  // --- P/L automatico per lotto rispetto al PMC ---
+  // --- P/L automatico per posizione rispetto al PMC ---
   if (state.multiAuto && !isNaN(uscita)) {
-    const fee = commissioneSelez('chCommissioniMulti');
-    const conPl = autoPlMulti(sel, uscita, fee);
+    const conPl = autoPlMulti(sel, uscita);
     if (conPl.every(x => !isNaN(x.pl))) {
       const tot = conPl.reduce((s, x) => s + x.pl, 0);
       const totCtr = conPl.reduce((s, x) => s + x.contratti, 0);
@@ -315,7 +270,7 @@ export function updatePreviewMulti() {
       const dettaglio = conPl.map(x => {
         const info = pmcRiferimento(x.pos, state.selectedDate);
         const punti = puntiUscita(x.pos.dir, info.media, uscita);
-        return `#${x.pos.id}: ${punti >= 0 ? '+' : ''}${fmtMedia(punti)} pt × ${x.contratti} × ${MOLTIPLICATORE}${fee ? ` − ${fmt(fee)} fee` : ''} → <strong>${x.pl >= 0 ? '+' : ''}${fmt(x.pl)}</strong>`;
+        return `#${x.pos.id}: ${punti >= 0 ? '+' : ''}${fmtMedia(punti)} pt × ${x.contratti} × ${MOLTIPLICATORE} → <strong>${x.pl >= 0 ? '+' : ''}${fmt(x.pl)}</strong>`;
       }).join('<br/>');
       el.innerHTML = `Uscita <strong>${fmtMedia(uscita)}</strong> · <strong>${totCtr} contr.</strong> · margine ${fmt(totMarg)} € · P/L tot <strong style="color:${tot>=0?'#22c55e':'#ef4444'}">${tot>=0?'+':''}${fmt(tot)}</strong> · ROI ${roi>=0?'+':''}${fmt(roi)}%<br/><span style="font-size:0.75rem;color:var(--muted)">${dettaglio}</span>`;
       el.classList.add('visible');
@@ -452,10 +407,9 @@ export function addChiusuraMulti() {
   const uscita = parseNum(getStrikeMulti());
   const stk = getStrikeMulti();
 
-  // --- P/L automatico per lotto (se disponibile) ---
+  // --- P/L automatico per posizione (se disponibile) ---
   if (state.multiAuto && !isNaN(uscita)) {
-    const fee = commissioneSelez('chCommissioniMulti');
-    const conPl = autoPlMulti(sel, uscita, fee);
+    const conPl = autoPlMulti(sel, uscita);
     if (conPl.every(x => !isNaN(x.pl))) {
       conPl.forEach(x => {
         x.pos.chiusure.push({ key: state.selectedDate, contratti: x.contratti, pl: x.pl, strike: stk });
