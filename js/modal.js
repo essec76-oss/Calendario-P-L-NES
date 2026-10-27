@@ -462,3 +462,51 @@ export function addChiusuraMulti() {
       });
       saveData();
       document.getElementById('chImportoMulti').value = '';
+      state.multiAuto = true;
+      renderOpsList();
+      renderPosCheckList();
+      populatePosizioniChiusura();
+      return;
+    }
+  }
+
+  const pl = parseFloat(document.getElementById('chImportoMulti').value);
+  if (isNaN(pl)) {
+    document.getElementById('chImportoMulti').focus();
+    return;
+  }
+  const totCtr = sel.reduce((s, x) => s + x.contratti, 0);
+  sel.forEach(x => {
+    const quota = pl * (x.contratti / totCtr);
+    x.pos.chiusure.push({ key: state.selectedDate, contratti: x.contratti, pl: quota, strike: stk });
+  });
+  saveData();
+  document.getElementById('chImportoMulti').value = '';
+  state.multiAuto = true;
+  renderOpsList();
+  renderPosCheckList();
+  populatePosizioniChiusura();
+}
+
+export function deletePosizione(id) {
+  const pos = state.data.find(p => p.id === id);
+  if (!pos) return;
+  const msg = pos.chiusure.length
+    ? 'Questa posizione ha già delle chiusure registrate: eliminandola spariranno anche i P/L correlati. Continuare?'
+    : 'Eliminare questa apertura?';
+  if (!confirm(msg)) return;
+  state.data = state.data.filter(p => p.id !== id);
+  deletePosizioneRemota(id);
+  renderPmcHeader();
+  renderOpsList();
+  populatePosizioniChiusura();
+}
+
+export function deleteChiusura(posId, index) {
+  const pos = state.data.find(p => p.id === posId);
+  if (!pos) return;
+  pos.chiusure.splice(index, 1);
+  saveData();
+  renderOpsList();
+  populatePosizioniChiusura();
+}
