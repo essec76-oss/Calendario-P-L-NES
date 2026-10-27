@@ -5,7 +5,7 @@ import { render, renderPmcHeader } from './calendar.js';
 import { updateStats, updateTarget, setWsScope } from './dashboard.js';
 import { residual } from './calc.js';
 import {
-  populateCommissioni, openModal, closeModal, setMode, setChMode,
+  openModal, closeModal, setMode, setChMode,
   updatePreviewApertura, updatePreviewChiusura, updatePreviewMulti,
   addApertura, addChiusura, addChiusuraMulti,
   deletePosizione, deleteChiusura
@@ -13,87 +13,93 @@ import {
 
 const $ = id => document.getElementById(id);
 
+// Aggancia un evento solo se l'elemento esiste: un id mancante non blocca lo script
+const on = (id, evento, fn) => {
+  const el = $(id);
+  if (el) el.addEventListener(evento, fn);
+  else console.warn(`main.js: elemento #${id} non trovato`);
+};
+
 // ---------- NAVIGAZIONE MESE ----------
-$('prevMonth').addEventListener('click', () => {
+on('prevMonth', 'click', () => {
   state.current.setMonth(state.current.getMonth() - 1);
   render();
 });
-$('nextMonth').addEventListener('click', () => {
+on('nextMonth', 'click', () => {
   state.current.setMonth(state.current.getMonth() + 1);
   render();
 });
 
-// ---------- INPUT CAPITALI / TARGET ----------
-$('capitale').addEventListener('change', () => {
+// ---------- INPUT CAPITALE / TARGET ----------
+on('capitale', 'change', () => {
   saveData();
   render();
 });
-$('capitale').addEventListener('input', () => {
+on('capitale', 'input', () => {
   updateStats(state.current.getFullYear(), state.current.getMonth());
   updateTarget(state.current.getFullYear(), state.current.getMonth());
 });
-$('targetPct').addEventListener('change', () => {
+on('targetPct', 'change', () => {
   saveData();
   updateTarget(state.current.getFullYear(), state.current.getMonth());
 });
-$('targetPct').addEventListener('input', () => updateTarget(state.current.getFullYear(), state.current.getMonth()));
+on('targetPct', 'input', () => {
+  updateTarget(state.current.getFullYear(), state.current.getMonth());
+});
 
 // ---------- WILSON TOGGLE ----------
-$('wsMese').addEventListener('click', () => setWsScope('mese'));
-$('wsTotale').addEventListener('click', () => setWsScope('totale'));
+on('wsMese', 'click', () => setWsScope('mese'));
+on('wsTotale', 'click', () => setWsScope('totale'));
 
 // ---------- MODALE ----------
-$('btnChiudi').addEventListener('click', closeModal);
-$('btnImporta').addEventListener('click', () => importaDaLocalStorage(render));
-$('btnAggiungi').addEventListener('click', () => {
+on('btnChiudi', 'click', closeModal);
+on('btnImporta', 'click', () => importaDaLocalStorage(render));
+on('btnAggiungi', 'click', () => {
   if (state.mode === 'apertura') addApertura();
   else if (state.chMode === 'multipla') addChiusuraMulti();
   else addChiusura();
 });
-$('subSingola').addEventListener('click', () => setChMode('singola'));
-$('subMultipla').addEventListener('click', () => setChMode('multipla'));
-$('modal').addEventListener('click', (e) => {
+on('subSingola', 'click', () => setChMode('singola'));
+on('subMultipla', 'click', () => setChMode('multipla'));
+on('modal', 'click', (e) => {
   if (e.target.id === 'modal') closeModal();
 });
-$('toggleApertura').addEventListener('click', () => setMode('apertura'));
-$('toggleChiusura').addEventListener('click', () => setMode('chiusura'));
+on('toggleApertura', 'click', () => setMode('apertura'));
+on('toggleChiusura', 'click', () => setMode('chiusura'));
 
 // ---------- FORM APERTURA ----------
-$('apTipologia').addEventListener('change', updatePreviewApertura);
-$('apContratti').addEventListener('input', updatePreviewApertura);
-$('apContratti').addEventListener('keydown', (e) => { if (e.key === 'Enter') addApertura(); });
-$('apStrike').addEventListener('keydown', (e) => { if (e.key === 'Enter') addApertura(); });
-$('apNota').addEventListener('keydown', (e) => { if (e.key === 'Enter') addApertura(); });
+on('apTipologia', 'change', updatePreviewApertura);
+on('apContratti', 'input', updatePreviewApertura);
+on('apContratti', 'keydown', (e) => { if (e.key === 'Enter') addApertura(); });
+on('apStrike', 'keydown', (e) => { if (e.key === 'Enter') addApertura(); });
+on('apNota', 'keydown', (e) => { if (e.key === 'Enter') addApertura(); });
 
 // ---------- FORM CHIUSURA SINGOLA ----------
-$('chPosizione').addEventListener('change', () => {
+on('chPosizione', 'change', () => {
   const pos = state.data.find(p => p.id == $('chPosizione').value);
   if (pos) {
     $('chContratti').value = residual(pos);
     $('chStrike').value = pos.strike || '';
   }
+  state.singolaAuto = true;
   updatePreviewChiusura();
 });
-$('chContratti').addEventListener('input', updatePreviewChiusura);
-$('chStrike').addEventListener('input', () => { state.singolaAuto = true; updatePreviewChiusura(); });
-$('chImporto').addEventListener('input', updatePreviewChiusura);
-$('chImporto').addEventListener('input', () => { state.singolaAuto = false; });
-$('chCommissioni').addEventListener('change', () => { state.singolaAuto = true; updatePreviewChiusura(); });
-$('chImporto').addEventListener('keydown', (e) => { if (e.key === 'Enter') addChiusura(); });
-$('chContratti').addEventListener('keydown', (e) => { if (e.key === 'Enter') addChiusura(); });
+on('chContratti', 'input', () => { state.singolaAuto = true; updatePreviewChiusura(); });
+on('chStrike', 'input', () => { state.singolaAuto = true; updatePreviewChiusura(); });
+on('chImporto', 'input', () => { state.singolaAuto = false; updatePreviewChiusura(); });
+on('chImporto', 'keydown', (e) => { if (e.key === 'Enter') addChiusura(); });
+on('chContratti', 'keydown', (e) => { if (e.key === 'Enter') addChiusura(); });
 
 // ---------- FORM CHIUSURA MULTIPLA ----------
-$('chImportoMulti').addEventListener('input', updatePreviewMulti);
-$('chImportoMulti').addEventListener('input', () => { state.multiAuto = false; });
-$('chStrikeMulti').addEventListener('input', () => { state.multiAuto = true; updatePreviewMulti(); });
-$('chCommissioniMulti').addEventListener('change', () => { state.multiAuto = true; updatePreviewMulti(); });
-$('chStrikeMulti').addEventListener('keydown', (e) => { if (e.key === 'Enter') addChiusuraMulti(); });
-$('chImportoMulti').addEventListener('keydown', (e) => { if (e.key === 'Enter') addChiusuraMulti(); });
+on('chImportoMulti', 'input', () => { state.multiAuto = false; updatePreviewMulti(); });
+on('chStrikeMulti', 'input', () => { state.multiAuto = true; updatePreviewMulti(); });
+on('chStrikeMulti', 'keydown', (e) => { if (e.key === 'Enter') addChiusuraMulti(); });
+on('chImportoMulti', 'keydown', (e) => { if (e.key === 'Enter') addChiusuraMulti(); });
 
 // ---------- HANDLER INLINE (onclick nel markup generato) ----------
 window.deletePosizione = deletePosizione;
 window.deleteChiusura = deleteChiusura;
-window.openModal = openModal; // usato dalle celle del calendario
+window.openModal = openModal;
 
 // ---------- RE-RENDER PMC DOPO OGNI SAVE ----------
 document.addEventListener(SAVED_EVENT, renderPmcHeader);
@@ -102,10 +108,11 @@ document.addEventListener(SAVED_EVENT, renderPmcHeader);
 document.addEventListener('app:day-click', (e) => openModal(e.detail));
 
 // ---------- INIT ----------
-populateCommissioni();
 render();
 initSupabase().then(() => loadData().then(d => {
   state.data = d;
   render();
-  $('btnImporta').disabled = false;
+  on('btnImporta', 'click', () => {}); // placeholder, il listener reale è già sopra
+  const btn = $('btnImporta');
+  if (btn) btn.disabled = false;
 }));
