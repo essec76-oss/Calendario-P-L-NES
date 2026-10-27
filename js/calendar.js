@@ -134,7 +134,7 @@ export function renderPmcHeader() {
     const elS = document.getElementById(idS);
     if (!info || info.media == null) {
       elV.textContent = '—';
-      elS.textContent = '';
+      elS.textContent = 'nessuna posizione';
     } else {
       elV.textContent = fmtMedia(info.media);
       elS.textContent = `${info.residuoCtr} contr. apert${info.residuoCtr === 1 ? 'o' : 'i'}` + (info.senzaPrezzo ? ` · ${info.senzaPrezzo} senza prezzo` : '');
