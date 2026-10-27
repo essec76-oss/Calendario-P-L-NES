@@ -132,7 +132,8 @@ export function renderPmcHeader() {
     const info = pmcDir(dir);
     const elV = document.getElementById(idV);
     const elS = document.getElementById(idS);
-    if (!info || info.media == null) {
+    // Se non c'è media oppure residuale = 0 → nessuna posizione aperta
+    if (!info || info.media == null || info.residuoCtr === 0) {
       elV.textContent = '—';
       elS.textContent = 'nessuna posizione';
     } else {
