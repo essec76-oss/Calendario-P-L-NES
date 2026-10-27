@@ -12,23 +12,37 @@ import { renderPmcHeader, render } from './calendar.js';
 // Nota: autoPlMulti è definita in fondo a questo file (dipende dal fee del form).
 
 // ========== COMMISSIONI ==========
+// Fee round-trip per contratto: COMMISSIONE_BASE × COMMISSIONE_STEP (0.605 × 4 = 2.42 €)
+let ctrLastSingola = null;
+let ctrLastMulti = null;
+
+function feeUnitaria() {
+  return Math.round(COMMISSIONE_BASE * COMMISSIONE_STEP * 1000) / 1000;
+}
+
+// Rigenera le opzioni come fee × n contratti e seleziona il default = n
+function buildCommissioni(id, n) {
+  const sel = document.getElementById(id);
+  const fee = feeUnitaria();
+  const maxOpt = Math.max(n, COMMISSIONE_STEP);
+  sel.innerHTML = '';
+  const opt0 = document.createElement('option');
+  opt0.value = '0';
+  opt0.textContent = '— Nessuna —';
+  sel.appendChild(opt0);
+  for (let k = 1; k <= maxOpt; k++) {
+    const v = Math.round(fee * k * 100) / 100;
+    const opt = document.createElement('option');
+    opt.value = String(v);
+    opt.textContent = `${fmt(v)} € (${fmt(fee)} × ${k} contr.)`;
+    sel.appendChild(opt);
+  }
+  sel.value = n > 0 ? String(Math.round(fee * n * 100) / 100) : '0';
+}
+
 export function populateCommissioni() {
-  ['chCommissioni', 'chCommissioniMulti'].forEach(id => {
-    const sel = document.getElementById(id);
-    sel.innerHTML = '';
-    const opt0 = document.createElement('option');
-    opt0.value = '0';
-    opt0.textContent = '— Nessuna —';
-    sel.appendChild(opt0);
-    for (let k = 1; k <= COMMISSIONE_STEP; k++) {
-      const v = Math.round(COMMISSIONE_BASE * k * 1000) / 1000;
-      const opt = document.createElement('option');
-      opt.value = String(v);
-      opt.textContent = `${fmt(v)} € (0.605 × ${k})`;
-      sel.appendChild(opt);
-    }
-    sel.value = '0';
-  });
+  buildCommissioni('chCommissioni', 0);
+  buildCommissioni('chCommissioniMulti', 0);
 }
 
 function commissioneSelez(id) {
@@ -89,6 +103,8 @@ function resetForms() {
   document.getElementById('chCommissioniMulti').value = '0';
   state.singolaAuto = true;
   state.multiAuto = true;
+  ctrLastSingola = null;
+  ctrLastMulti = null;
   populatePosizioniChiusura();
 }
 
@@ -206,6 +222,10 @@ export function updatePreviewChiusura() {
   const residuo = residual(pos);
   let contratti = parseInt(document.getElementById('chContratti').value) || 1;
   contratti = Math.min(Math.max(1, contratti), residuo);
+  if (contratti !== ctrLastSingola) {
+    ctrLastSingola = contratti;
+    buildCommissioni('chCommissioni', contratti);
+  }
   const uscita = parseNum(document.getElementById('chStrike').value);
   const info = pmcRiferimento(pos, state.selectedDate);
 
@@ -217,8 +237,7 @@ export function updatePreviewChiusura() {
     document.getElementById('chImporto').value = auto;
     const marg = margineUnit(pos.dir) * contratti;
     const roi = calcRoi(auto, marg);
-    const primaChiusura = pos.chiusure.length === 0;
-    el.innerHTML = `PMC ${pos.dir}${primaChiusura ? '' : " (congelato all'inizio delle chiusure)"}: <strong>${fmtMedia(info.media)}</strong> · uscita <strong>${fmtMedia(uscita)}</strong> · ${punti >= 0 ? '+' : ''}${fmtMedia(punti)} punti<br/>` +
+    el.innerHTML = `PMC ${pos.dir} (attuale, prima di questa chiusura): <strong>${fmtMedia(info.media)}</strong> · uscita <strong>${fmtMedia(uscita)}</strong> · ${punti >= 0 ? '+' : ''}${fmtMedia(punti)} punti<br/>` +
       `${fmtMedia(punti)} × ${contratti} contr. × ${MOLTIPLICATORE}${fee ? ` − ${fmt(fee)} comm.` : ''} = <strong style="color:${auto>=0?'#22c55e':'#ef4444'}">${auto>=0?'+':''}${fmt(auto)}</strong> · ROI ${roi>=0?'+':''}${fmt(roi)}%`;
     el.classList.add('visible');
     return;
@@ -245,6 +264,13 @@ export function updatePreviewMulti() {
     return;
   }
   const uscita = parseNum(getStrikeMulti());
+
+  // Default fee multipla: fee × contratti della posizione con più contratti chiusi
+  const nFee = sel.length ? Math.max(...sel.map(x => x.contratti)) : 0;
+  if (nFee !== ctrLastMulti) {
+    ctrLastMulti = nFee;
+    buildCommissioni('chCommissioniMulti', nFee);
+  }
 
   // --- P/L automatico: ricalcolo per ogni posizione rispetto al PMC ---
   if (state.multiAuto && !isNaN(uscita)) {
