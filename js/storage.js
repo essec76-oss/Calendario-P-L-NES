@@ -1,14 +1,12 @@
 // ========== PERSISTENZA (Neon tramite /api/data) ==========
-// SOSTITUIRE in js/storage.js tutto il blocco dalla prima riga fino alla fine
-// della funzione deletePosizioneRemota. NON toccare importaDaLocalStorage.
-import { LS_KEY } from './config.js';
+import { LS_KEY_V3 } from './config.js';
 import { state } from './state.js';
-import { getCapitale, getTargetPct } from './utils.js';
+import { getCapitale } from './utils.js';
 
 // Evento emesso dopo ogni salvataggio: main.js aggancia qui i re-render.
 export const SAVED_EVENT = 'app:data-saved';
 
-// Mantenuta con lo stesso nome perché main.js la importa.
+// Nome mantenuto perché main.js lo importa. Non usa più Supabase.
 export async function initSupabase() {
   state.useLocalFallback = false;
 }
@@ -52,10 +50,6 @@ export async function deletePosizioneRemota(id) {
   const res = await fetch(`/api/data?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
   if (!res.ok) console.error('Errore eliminazione:', res.status);
 }
-  if (state.useLocalFallback || !state.supabaseClient) return;
-  const { error } = await state.supabaseClient.from('posizioni').delete().eq('id', id);
-  if (error) console.error('Errore eliminazione:', error);
-}
 
 // ========== IMPORTAZIONE UNA TANTUM (dal vecchio localStorage v3) ==========
 export async function importaDaLocalStorage(render) {
@@ -70,7 +64,7 @@ export async function importaDaLocalStorage(render) {
     alert('Nessuna posizione da importare.');
     return;
   }
-  if (!confirm(`Importare ${daImportare.length} posizioni su Supabase?`)) return;
+  if (!confirm(`Importare ${daImportare.length} posizioni nel database?`)) return;
 
   if (parsed.capitale) document.getElementById('capitale').value = parsed.capitale;
   if (parsed.targetPct) document.getElementById('targetPct').value = parsed.targetPct;
