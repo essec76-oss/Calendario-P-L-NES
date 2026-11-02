@@ -19,7 +19,7 @@ export function populateCommissioni() {}
 function ordinaPerData(lista) {
   return lista.slice().sort((a, b) => {
     if (a.openKey !== b.openKey) return a.openKey < b.openKey ? -1 : 1;
-    return state.data.indexOf(a) - state.data.indexOf(b);
+    return Number(a.id) - Number(b.id);
   });
 }
 
