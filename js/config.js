@@ -1,8 +1,5 @@
 // ========== CONFIGURAZIONE ==========
 
-// Supabase
-export const SUPABASE_URL = 'https://tpsakiwumpxcevnrfdic.supabase.co';
-export const SUPABASE_KEY = 'sb_publishable_jRgYc27V1-y2PJbPVV9E4g_e407_KUW';
 
 // localStorage fallback
 export const LS_KEY = 'calendario-profitti-remote-fallback';
