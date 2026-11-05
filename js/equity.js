@@ -9,6 +9,7 @@ let scope = 'totale';   // 'totale' | 'mese'
 let mostraReale = true;
 let mostraStandard = true;
 let meseVisualizzato = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+let indiceOggi = -1;    // posizione di oggi nella serie corrente (-1 = fuori intervallo)
 
 const $ = id => document.getElementById(id);
 
@@ -25,6 +26,32 @@ function round2(n) {
   return Math.round(n * 100) / 100;
 }
 
+// Plugin Chart.js: disegna un pallino su ogni serie visibile nel giorno di oggi
+const pallinoOggi = {
+  id: 'pallinoOggi',
+  afterDatasetsDraw(chart) {
+    if (indiceOggi < 0) return;
+    const { ctx } = chart;
+    chart.data.datasets.forEach((ds, dsIdx) => {
+      if (!chart.isDatasetVisible(dsIdx)) return;
+      const pt = chart.getDatasetMeta(dsIdx).data[indiceOggi];
+      const val = ds.data[indiceOggi];
+      if (!pt || val == null) return;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, 6, 0, Math.PI * 2);
+      ctx.fillStyle = ds.borderColor;
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    });
+  }
+};
+Chart.register(pallinoOggi);
+
 // Serie giornaliera tra due date: equity reale cumulata nel periodo e ritmo standard lineare
 export function costruisciSerie(da, a, rataGiorno) {
   const plPerGiorno = {};
@@ -33,20 +60,25 @@ export function costruisciSerie(da, a, rataGiorno) {
   }));
 
   const labels = [];
+  const keys = [];
   const reale = [];
   const standard = [];
   let cum = 0;
   let i = 0;
 
   for (let dt = new Date(da); dt <= a; dt.setDate(dt.getDate() + 1)) {
-    cum += plPerGiorno[dateToKey(dt)] || 0;
+    const key = dateToKey(dt);
+    cum += plPerGiorno[key] || 0;
     i++;
     labels.push(dt.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit' }));
+    keys.push(key);
     reale.push(round2(cum));
     standard.push(round2(rataGiorno * i));
   }
 
-  return { labels, reale, standard };
+  const idxOggi = keys.indexOf(dateToKey(new Date()));
+
+  return { labels, reale, standard, idxOggi };
 }
 
 // Intervallo "Totale": dalla prima data registrata fino a oggi (o all'ultima chiusura se successiva)
@@ -88,6 +120,8 @@ function meseTitolo() {
 function disegna(serie) {
   const ctx = $('equityChart');
   if (chart) chart.destroy();
+
+  indiceOggi = serie.idxOggi;
 
   chart = new Chart(ctx, {
     type: 'line',
@@ -181,6 +215,7 @@ function aggiorna() {
 
   if (!intervallo) {
     if (chart) { chart.destroy(); chart = null; }
+    indiceOggi = -1;
     $('chartBox').style.display = 'none';
     $('emptyMsg').textContent = 'Nessun dato ancora: registra qualche apertura nel calendario.';
     $('emptyMsg').style.display = '';
