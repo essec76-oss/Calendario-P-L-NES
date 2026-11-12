@@ -1,12 +1,9 @@
-// ========== PERSISTENZA (Neon tramite /api/data) ==========
 import { LS_KEY_V3 } from './config.js';
 import { state } from './state.js';
-import { getCapitale } from './utils.js';
+import { meseKey } from './utils.js';
 
-// Evento emesso dopo ogni salvataggio: main.js aggancia qui i re-render.
 export const SAVED_EVENT = 'app:data-saved';
 
-// Nome mantenuto perché main.js lo importa. Non usa più Supabase.
 export async function initSupabase() {
   state.useLocalFallback = false;
 }
@@ -17,27 +14,36 @@ export async function loadData() {
     console.error('Errore caricamento:', res.status);
     return [];
   }
-  const { impostazioni, posizioni } = await res.json();
-  if (impostazioni) {
-    document.getElementById('capitale').value = impostazioni.capitale;
-    document.getElementById('targetPct').value = impostazioni.target_pct;
+  const { impostazioni, mesi = [], settimane = [], posizioni } = await res.json();
+
+  state.impostazioniMese = {};
+  mesi.forEach(r => {
+    state.impostazioniMese[r.mese] = { capitale: r.capitale, target_pct: r.target_pct };
+  });
+  // migrazione: la vecchia riga globale diventa il mese corrente, se non ci sono ancora mesi
+  if (!mesi.length && impostazioni) {
+    state.impostazioniMese[meseKey()] = { capitale: impostazioni.capitale, target_pct: impostazioni.target_pct };
   }
+
+  state.capitaleSettimana = {};
+  settimane.forEach(r => { state.capitaleSettimana[r.settimana] = r.capitale; });
+
   return posizioni || [];
 }
 
 export async function saveData() {
-  const capitale = getCapitale();
-  const targetPct = parseFloat(document.getElementById('targetPct').value) || 4;
+  const mesi = Object.entries(state.impostazioniMese).map(([mese, v]) => ({
+    mese, capitale: v.capitale, target_pct: v.target_pct
+  }));
+  const settimane = Object.entries(state.capitaleSettimana).map(([settimana, capitale]) => ({
+    settimana, capitale
+  }));
 
   try {
     const res = await fetch('/api/data', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        capitale,
-        target_pct: targetPct,
-        posizioni: state.data
-      })
+      body: JSON.stringify({ mesi, settimane, posizioni: state.data })
     });
     if (!res.ok) console.error('Errore salvataggio:', res.status);
   } catch (e) {
@@ -66,10 +72,13 @@ export async function importaDaLocalStorage(render) {
   }
   if (!confirm(`Importare ${daImportare.length} posizioni nel database?`)) return;
 
-  if (parsed.capitale) document.getElementById('capitale').value = parsed.capitale;
-  if (parsed.targetPct) document.getElementById('targetPct').value = parsed.targetPct;
+  if (parsed.capitale) {
+    state.impostazioniMese[meseKey()] = {
+      capitale: parsed.capitale,
+      target_pct: parsed.targetPct || 4
+    };
+  }
 
-  // unisce con i dati già presenti, evitando duplicati
   const idEsistenti = new Set(state.data.map(p => p.id));
   state.data = [...state.data, ...daImportare.filter(p => !idEsistenti.has(p.id))];
 
