@@ -51,7 +51,7 @@ export function render() {
     cells.push({ y: year, m: month + 1, d, other: true });
   }
 
-  // render per righe di 7 con numero settimana ISO a sinistra
+  // render per righe di 7: prima la cella settimana, poi i 7 giorni
   const curKey = meseKey();
   let primaVista = false;
   for (let r = 0; r < cells.length; r += 7) {
@@ -69,6 +69,55 @@ export function render() {
   updateStats(year, month);
   updateTarget(year, month);
   renderPmcHeader();
+}
+
+function createWeekCell(monday, settimana, èPrima) {
+  const wkey = isoWeekKey(monday);
+  const curKey = meseKey();
+  const cell = document.createElement('div');
+  cell.className = 'week-cell' + (èPrima ? ' prima' : '');
+
+  const head = document.createElement('div');
+  head.className = 'wnum';
+  head.textContent = `W${isoWeek(monday)}`;
+  cell.appendChild(head);
+
+  // settimane che appartengono a un altro mese: solo il numero
+  if (meseKey(monday) !== curKey) return cell;
+
+  const cap = getCapitale();
+  if (èPrima) {
+    const v = document.createElement('div');
+    v.className = 'wcap';
+    v.textContent = '€ ' + fmt(cap) + ' inizio';
+    cell.appendChild(v);
+    return cell;
+  }
+
+  const dom = settimana[6];
+  const fine = dayKey(new Date(dom.y, dom.m, dom.d));
+  const sugg = cap + plMeseFinoA(state.current.getFullYear(), state.current.getMonth(), fine);
+  const manuale = state.capitaleSettimana[wkey];
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.inputMode = 'decimal';
+  input.value = manuale != null ? String(manuale).replace('.', ',') : '';
+  input.placeholder = fmt(sugg);
+  input.title = manuale != null
+    ? 'Valore inserito a mano'
+    : 'Suggerito: capitale iniziale + P/L chiuso fino a fine settimana';
+  if (manuale == null) input.classList.add('suggerito');
+
+  input.addEventListener('change', () => {
+    const v = parseNum(input.value);
+    state.capitaleSettimana[wkey] = isNaN(v) ? null : v;
+    saveData();
+    render();
+  });
+
+  cell.appendChild(input);
+  return cell;
 }
 
 function createDayCell(y, m, d, other, isToday = false) {
