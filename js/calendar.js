@@ -1,8 +1,10 @@
 // ========== RENDER CALENDARIO + HEADER PMC ==========
 import { state } from './state.js';
-import { fmt, fmtMedia, isoWeek, margineUnit, escapeHtml } from './utils.js';
-import { apertureDelGiorno, chiusureDelGiorno, pmcDir, calcRoi } from './calc.js';
+import { fmt, fmtMedia, isoWeek, margineUnit, escapeHtml, getCapitale, getTargetPct,
+         meseKey, isoWeekKey, dayKey, parseNum } from './utils.js';
+import { apertureDelGiorno, chiusureDelGiorno, pmcDir, calcRoi, plMeseFinoA } from './calc.js';
 import { updateStats, updateTarget } from './dashboard.js';
+import { saveData } from './storage.js';
 
 export function render() {
   const year = state.current.getFullYear();
@@ -17,12 +19,14 @@ export function render() {
 
   const cal = document.getElementById('calendar');
   cal.innerHTML = '';
+  document.getElementById('capitale').value = getCapitale();
+  document.getElementById('targetPct').value = getTargetPct();
 
   // intestazione: cella vuota per la colonna settimana + giorni
   const corner = document.createElement('div');
   corner.className = 'weekday';
   corner.title = 'N° settimana';
-  corner.textContent = 'W';
+  corner.textContent = 'Settimana';
   cal.appendChild(corner);
   ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].forEach(d => {
     const el = document.createElement('div');
@@ -48,14 +52,15 @@ export function render() {
   }
 
   // render per righe di 7 con numero settimana ISO a sinistra
+  const curKey = meseKey();
+  let primaVista = false;
   for (let r = 0; r < cells.length; r += 7) {
     const settimana = cells.slice(r, r + 7);
     const monday = new Date(settimana[0].y, settimana[0].m, settimana[0].d);
-    const wEl = document.createElement('div');
-    wEl.className = 'week-num';
-    wEl.textContent = isoWeek(monday);
-    wEl.title = `Settimana ${isoWeek(monday)}`;
-    cal.appendChild(wEl);
+    const meseLun = meseKey(monday);
+    const èPrima = meseLun === curKey && !primaVista;
+    if (meseLun === curKey) primaVista = true;
+    cal.appendChild(createWeekCell(monday, settimana, èPrima));
     settimana.forEach(c => {
       cal.appendChild(createDayCell(c.y, c.m, c.d, c.other, !!c.isToday));
     });
