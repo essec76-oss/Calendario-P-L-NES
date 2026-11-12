@@ -1,6 +1,3 @@
-// Vercel Serverless Function: /api/data
-// Legge e scrive posizioni e impostazioni su Neon.
-// La variabile d'ambiente DATABASE_URL viene impostata su Vercel (mai nel codice).
 import { neon } from '@neondatabase/serverless';
 
 const sql = neon(process.env.DATABASE_URL);
@@ -9,11 +6,15 @@ export default async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       const imp = await sql`select capitale, target_pct from impostazioni where id = 1`;
+      const mesi = await sql`select mese, capitale, target_pct from impostazioni_mese`;
+      const sett = await sql`select settimana, capitale from capitale_settimana`;
       const pos = await sql`
         select id, dir, strike, contratti, open_key::text as open_key, nota, chiusure
         from posizioni`;
       return res.status(200).json({
-        impostazioni: imp[0] || null,
+        impostazioni: imp[0] ? { capitale: Number(imp[0].capitale), target_pct: Number(imp[0].target_pct) } : null,
+        mesi: mesi.map(r => ({ mese: r.mese, capitale: Number(r.capitale), target_pct: Number(r.target_pct) })),
+        settimane: sett.map(r => ({ settimana: r.settimana, capitale: Number(r.capitale) })),
         posizioni: pos.map(p => ({
           id: Number(p.id),
           dir: p.dir,
@@ -27,14 +28,29 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
-      const { capitale, target_pct, posizioni = [] } = req.body || {};
+      const { posizioni = [], mesi = [], settimane = [] } = req.body || {};
+      const queries = [];
 
-      const queries = [
-        sql`insert into impostazioni (id, capitale, target_pct)
-            values (1, ${capitale}, ${target_pct})
-            on conflict (id) do update
-            set capitale = excluded.capitale, target_pct = excluded.target_pct`
-      ];
+      for (const m of mesi) {
+        queries.push(sql`
+          insert into impostazioni_mese (mese, capitale, target_pct)
+          values (${m.mese}, ${m.capitale}, ${m.target_pct})
+          on conflict (mese) do update
+          set capitale = excluded.capitale, target_pct = excluded.target_pct`);
+      }
+
+      // capitale null = settimana svuotata: si cancella la riga
+      for (const s of settimane) {
+        if (s.capitale == null) {
+          queries.push(sql`delete from capitale_settimana where settimana = ${s.settimana}`);
+        } else {
+          queries.push(sql`
+            insert into capitale_settimana (settimana, capitale)
+            values (${s.settimana}, ${s.capitale})
+            on conflict (settimana) do update
+            set capitale = excluded.capitale`);
+        }
+      }
 
       for (const p of posizioni) {
         queries.push(sql`
@@ -46,7 +62,7 @@ export default async function handler(req, res) {
               open_key = excluded.open_key, nota = excluded.nota, chiusure = excluded.chiusure`);
       }
 
-      await sql.transaction(queries);
+      if (queries.length) await sql.transaction(queries);
       return res.status(200).json({ ok: true });
     }
 
