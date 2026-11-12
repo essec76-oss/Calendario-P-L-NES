@@ -320,7 +320,7 @@ h1 { font-size: 1.4rem; font-weight: 700; }
 .legend .dot { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 4px; vertical-align: middle; }
 .calendar {
   display: grid;
-  grid-template-columns: 34px repeat(7, 1fr);
+  grid-template-columns: 110px repeat(7, 1fr);
   gap: 6px;
   margin-bottom: 24px;
 }
@@ -331,6 +331,30 @@ h1 { font-size: 1.4rem; font-weight: 700; }
   padding: 6px 0;
   font-weight: 600;
 }
+.week-cell {
+  background: rgba(148,163,184,0.08);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  justify-content: center;
+}
+.week-cell.prima { border-color: var(--accent); }
+.week-cell .wnum { font-size: 0.7rem; font-weight: 700; color: var(--muted); }
+.week-cell .wcap { font-size: 0.7rem; color: var(--muted); }
+.week-cell input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  text-align: right;
+}
+.week-cell input.suggerito { color: #64748b; font-style: italic; }
 .week-num {
   display: flex;
   align-items: center;
@@ -610,6 +634,6 @@ footer {
   h1 { font-size: 1.15rem; }
   .form-row { grid-template-columns: 1fr; }
   .target-hero .hero-value { font-size: 1.4rem; }
-  .calendar { grid-template-columns: 24px repeat(7, 1fr); }
+  .calendar { grid-template-columns: 78px repeat(7, 1fr); }
   .week-num { font-size: 0.6rem; }
 }
