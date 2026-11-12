@@ -1,6 +1,6 @@
 // ========== HELPER PURI ==========
 import { MARGINE_LONG, MARGINE_SHORT } from './config.js';
-
+import { state } from './state.js';
 export function fmt(n) {
   return n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -43,11 +43,40 @@ export function isoWeek(dt) {
   return 1 + Math.round((d - firstThursday) / (7 * 86400000));
 }
 
-// Valori dei due input principali
+// ========== CHIAVI MESE / SETTIMANA ==========
+export function meseKey(d = state.current) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+export function dayKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// Chiave settimana ISO 'YYYY-Www' (l'anno è quello del giovedì della settimana)
+export function isoWeekKey(dt) {
+  const d = new Date(Date.UTC(dt.getFullYear(), dt.getMonth(), dt.getDate()));
+  const dayNum = (d.getUTCDay() + 6) % 7;
+  d.setUTCDate(d.getUTCDate() - dayNum + 3);
+  return `${d.getUTCFullYear()}-W${String(isoWeek(dt)).padStart(2, '0')}`;
+}
+
+// Impostazioni del mese; se il mese non è configurato eredita la configurazione precedente più vicina
+export function impostazioneMese(k = meseKey()) {
+  if (state.impostazioniMese[k]) return state.impostazioniMese[k];
+  const chiavi = Object.keys(state.impostazioniMese).sort();
+  const vicina = chiavi.filter(x => x < k).pop() ?? chiavi[0];
+  return vicina ? state.impostazioniMese[vicina] : { capitale: 5000, target_pct: 4 };
+}
+
 export function getCapitale() {
-  return parseFloat(document.getElementById('capitale').value) || 5000;
+  return impostazioneMese().capitale;
 }
 
 export function getTargetPct() {
-  return parseFloat(document.getElementById('targetPct').value) || 0;
+  return impostazioneMese().target_pct;
+}
+
+export function setImpostazioneMese(patch) {
+  const k = meseKey();
+  state.impostazioniMese[k] = { ...impostazioneMese(k), ...patch };
 }

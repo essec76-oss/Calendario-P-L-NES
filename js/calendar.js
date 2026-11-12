@@ -1,8 +1,10 @@
 // ========== RENDER CALENDARIO + HEADER PMC ==========
 import { state } from './state.js';
-import { fmt, fmtMedia, isoWeek, margineUnit, escapeHtml } from './utils.js';
-import { apertureDelGiorno, chiusureDelGiorno, pmcDir, calcRoi } from './calc.js';
+import { fmt, fmtMedia, isoWeek, margineUnit, escapeHtml, getCapitale, getTargetPct,
+         meseKey, isoWeekKey, dayKey, parseNum } from './utils.js';
+import { apertureDelGiorno, chiusureDelGiorno, pmcDir, calcRoi, plMeseFinoA } from './calc.js';
 import { updateStats, updateTarget } from './dashboard.js';
+import { saveData } from './storage.js';
 
 export function render() {
   const year = state.current.getFullYear();
@@ -17,12 +19,14 @@ export function render() {
 
   const cal = document.getElementById('calendar');
   cal.innerHTML = '';
+  document.getElementById('capitale').value = getCapitale();
+  document.getElementById('targetPct').value = getTargetPct();
 
   // intestazione: cella vuota per la colonna settimana + giorni
   const corner = document.createElement('div');
   corner.className = 'weekday';
   corner.title = 'N° settimana';
-  corner.textContent = 'W';
+  corner.textContent = 'Settimana';
   cal.appendChild(corner);
   ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].forEach(d => {
     const el = document.createElement('div');
@@ -47,15 +51,16 @@ export function render() {
     cells.push({ y: year, m: month + 1, d, other: true });
   }
 
-  // render per righe di 7 con numero settimana ISO a sinistra
+  // render per righe di 7: prima la cella settimana, poi i 7 giorni
+  const curKey = meseKey();
+  let primaVista = false;
   for (let r = 0; r < cells.length; r += 7) {
     const settimana = cells.slice(r, r + 7);
     const monday = new Date(settimana[0].y, settimana[0].m, settimana[0].d);
-    const wEl = document.createElement('div');
-    wEl.className = 'week-num';
-    wEl.textContent = isoWeek(monday);
-    wEl.title = `Settimana ${isoWeek(monday)}`;
-    cal.appendChild(wEl);
+    const meseLun = meseKey(monday);
+    const èPrima = meseLun === curKey && !primaVista;
+    if (meseLun === curKey) primaVista = true;
+    cal.appendChild(createWeekCell(monday, settimana, èPrima));
     settimana.forEach(c => {
       cal.appendChild(createDayCell(c.y, c.m, c.d, c.other, !!c.isToday));
     });
@@ -64,6 +69,55 @@ export function render() {
   updateStats(year, month);
   updateTarget(year, month);
   renderPmcHeader();
+}
+
+function createWeekCell(monday, settimana, èPrima) {
+  const wkey = isoWeekKey(monday);
+  const curKey = meseKey();
+  const cell = document.createElement('div');
+  cell.className = 'week-cell' + (èPrima ? ' prima' : '');
+
+  const head = document.createElement('div');
+  head.className = 'wnum';
+  head.textContent = `W${isoWeek(monday)}`;
+  cell.appendChild(head);
+
+  // settimane che appartengono a un altro mese: solo il numero
+  if (meseKey(monday) !== curKey) return cell;
+
+  const cap = getCapitale();
+  if (èPrima) {
+    const v = document.createElement('div');
+    v.className = 'wcap';
+    v.textContent = '€ ' + fmt(cap) + ' inizio';
+    cell.appendChild(v);
+    return cell;
+  }
+
+  const dom = settimana[6];
+  const fine = dayKey(new Date(dom.y, dom.m, dom.d));
+  const sugg = cap + plMeseFinoA(state.current.getFullYear(), state.current.getMonth(), fine);
+  const manuale = state.capitaleSettimana[wkey];
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.inputMode = 'decimal';
+  input.value = manuale != null ? String(manuale).replace('.', ',') : '';
+  input.placeholder = fmt(sugg);
+  input.title = manuale != null
+    ? 'Valore inserito a mano'
+    : 'Suggerito: capitale iniziale + P/L chiuso fino a fine settimana';
+  if (manuale == null) input.classList.add('suggerito');
+
+  input.addEventListener('change', () => {
+    const v = parseNum(input.value);
+    state.capitaleSettimana[wkey] = isNaN(v) ? null : v;
+    saveData();
+    render();
+  });
+
+  cell.appendChild(input);
+  return cell;
 }
 
 function createDayCell(y, m, d, other, isToday = false) {

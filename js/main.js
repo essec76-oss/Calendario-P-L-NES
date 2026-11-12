@@ -4,6 +4,7 @@ import { initSupabase, loadData, saveData, importaDaLocalStorage, SAVED_EVENT } 
 import { render, renderPmcHeader } from './calendar.js';
 import { updateStats, updateTarget, setWsScope } from './dashboard.js';
 import { residual } from './calc.js';
+import { setImpostazioneMese, parseNum } from './utils.js';
 import {
   openModal, closeModal, setMode, setChMode,
   updatePreviewApertura, updatePreviewChiusura, updatePreviewMulti,
@@ -31,19 +32,21 @@ on('nextMonth', 'click', () => {
 });
 
 // ---------- INPUT CAPITALE / TARGET ----------
+on('capitale', 'input', e => {
+  setImpostazioneMese({ capitale: parseNum(e.target.value) || 0 });
+  updateStats(state.current.getFullYear(), state.current.getMonth());
+  updateTarget(state.current.getFullYear(), state.current.getMonth());
+});
 on('capitale', 'change', () => {
   saveData();
   render();
 });
-on('capitale', 'input', () => {
-  updateStats(state.current.getFullYear(), state.current.getMonth());
+on('targetPct', 'input', e => {
+  setImpostazioneMese({ target_pct: parseNum(e.target.value) || 0 });
   updateTarget(state.current.getFullYear(), state.current.getMonth());
 });
 on('targetPct', 'change', () => {
   saveData();
-  updateTarget(state.current.getFullYear(), state.current.getMonth());
-});
-on('targetPct', 'input', () => {
   updateTarget(state.current.getFullYear(), state.current.getMonth());
 });
 

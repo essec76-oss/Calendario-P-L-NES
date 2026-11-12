@@ -208,3 +208,12 @@ export function probWinRateSopra(wins, n, soglia) {
   if (se === 0) return p > soglia ? 1 : (p < soglia ? 0 : 0.5);
   return normCdf((p - soglia) / se);
 }
+// P/L chiuso nel mese fino a una data (inclusa), chiave 'YYYY-MM-DD'
+export function plMeseFinoA(y, m, fineKey) {
+  const prefix = `${y}-${String(m + 1).padStart(2, '0')}`;
+  let tot = 0;
+  state.data.forEach(p => p.chiusure.forEach(c => {
+    if (c.key.startsWith(prefix) && c.key <= fineKey) tot += c.pl || 0;
+  }));
+  return tot;
+}
