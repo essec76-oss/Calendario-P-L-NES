@@ -10,6 +10,7 @@ export const state = {
   singolaAuto: true,   // P/L singola calcolato automaticamente
   multiAuto: true,     // P/L multipla calcolato automaticamente
   wsScope: 'mese',     // 'mese' | 'totale' (scope statistiche Wilson)
-  supabaseClient: null,
+  impostazioniMese: {},   // { 'YYYY-MM': { capitale, target_pct } }
+  capitaleSettimana: {},  // { 'YYYY-Www': number | null }  supabaseClient: null,
   useLocalFallback: false,
 };
