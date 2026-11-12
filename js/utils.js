@@ -1,6 +1,6 @@
 // ========== HELPER PURI ==========
 import { MARGINE_LONG, MARGINE_SHORT } from './config.js';
-
+import { state } from './state.js';
 export function fmt(n) {
   return n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
